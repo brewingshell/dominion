@@ -23,7 +23,7 @@
 
 dominion is a door to your shells. Read this before exposing it to anything.
 
-- **Default PIN is `3232`.** Change it. It is a shared secret entered once per
+- **Default PIN is `1111`.** Change it. It is a shared secret entered once per
   client; there is no per-user account model.
 - **LAN only.** Do not put it on the public internet. If you must reach it from
   outside, use a VPN (e.g. Tailscale/WireGuard) rather than a port forward.
@@ -59,9 +59,19 @@ go build -trimpath -ldflags "-s -w" -o dominion .
 ./dominion
 ```
 
-Then open `https://<your-host>:5550` in a browser and enter the PIN (`3232` by
-default; set `DOMINION_PIN` to change it). Your browser will warn about the
-self-signed certificate — see [TLS](#tls).
+Then open `https://<your-host>:5550` in a browser and enter the PIN (`1111` by
+default). Your browser will warn about the self-signed certificate — see
+[TLS](#tls).
+
+Set the PIN in a `.env` file (read from `./.env` or
+`~/.config/dominion/.env`; see [`.env.example`](.env.example)):
+
+```sh
+cp .env.example .env
+```
+
+An exported `DOMINION_PIN` or an explicit `-pin` flag takes precedence over the
+file.
 
 Run locally while testing:
 
@@ -88,12 +98,13 @@ loginctl enable-linger "$USER"
 ```
 
 The server runs **inside a tmux session named `dominion`**, so its own log is the
-first tab in the portal. `run.sh` sources `~/.config/dominion/env` (the tmux
-server may predate the unit and not inherit it) and loops the server, so a Ctrl-C
-from the portal tab restarts it instead of ending the session. Because tmux
-detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`), and
-`KillMode=process` plus `ExecStop` ensure stopping the unit tears down only the
-`dominion` session, never your other tmux sessions.
+first tab in the portal. `install.sh` seeds `~/.config/dominion/.env` from
+`.env.example`, and the server reads the PIN from there (the tmux server may
+predate the unit and not inherit its environment). It loops the server, so a
+Ctrl-C from the portal tab restarts it instead of ending the session. Because
+tmux detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`),
+and `KillMode=process` plus `ExecStop` ensure stopping the unit tears down only
+the `dominion` session, never your other tmux sessions.
 
 ## TLS
 
@@ -129,7 +140,7 @@ HTTPS sessions stay protected.
 | Flag           | Default                | Description                                        |
 |----------------|------------------------|----------------------------------------------------|
 | `-addr`        | `:5550`                | Listen address. Bind one interface with `192.168.x.x:5550`. |
-| `-pin`         | `$DOMINION_PIN` or `3232` | PIN required to access the portal.               |
+| `-pin`         | `$DOMINION_PIN`, `.env`, or `1111` | PIN required to access the portal.    |
 | `-tmux`        | `tmux`                 | Path to the tmux binary.                           |
 | `-ttl`         | `12h`                  | How long a login lasts.                            |
 | `-tls`         | `true`                 | Serve TLS with a local CA-signed certificate.      |
@@ -141,8 +152,9 @@ HTTPS sessions stay protected.
 | `-fingerprint` |                        | Print the CA path and fingerprint, then exit.      |
 | `-branding`    | `assets`               | Directory of logo overrides (see [Branding](#branding)). |
 
-Prefer `DOMINION_PIN` over `-pin`: a flag is visible in `ps` to other local
-users, an environment variable is not.
+Prefer `DOMINION_PIN` (env or `.env`) over `-pin`: a flag is visible in `ps` to
+other local users, an environment variable is not. Precedence is
+`-pin` → `DOMINION_PIN` env → `.env` file → built-in `1111`.
 
 ## The dominion session
 
@@ -209,6 +221,7 @@ Layout:
 
 ```
 main.go                    flags, embedded web assets, TLS listener
+env.go                     .env loading and PIN resolution
 internal/tmux/             session listing, exact targeting, name validation
 internal/auth/             PIN check, session tokens, rate limiting
 internal/ptybridge/        PTY <-> WebSocket bridge with resize, keepalive,
@@ -217,6 +230,7 @@ internal/tlsconf/          local CA + leaf certificate generation
 internal/server/           HTTP routes, auth middleware, static files, branding
 web/                       index.html, app.js, style.css, vendor/ (xterm.js)
 assets/                    logo source + override drop-in
+.env.example               copy to .env (or ~/.config/dominion/.env)
 test/                      jsdom harness for web/app.js (dev-only)
 apps/                      Android APK + Linux AppImage shells
 client_app/                built client binaries (gitignored)

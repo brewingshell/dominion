@@ -33,17 +33,14 @@ func (s *sanList) Set(v string) error {
 }
 
 func main() {
-	defaultPIN := os.Getenv("DOMINION_PIN")
-	if defaultPIN == "" {
-		defaultPIN = "3232"
-	}
 	home, _ := os.UserHomeDir()
 	defaultTLSDir := filepath.Join(home, ".config", "dominion")
+	defaultPIN := pinFromEnv(home)
 
 	var sans sanList
 	var (
 		addr        = flag.String("addr", ":5550", "address to listen on")
-		pin         = flag.String("pin", defaultPIN, "PIN required to access the portal (env DOMINION_PIN)")
+		pin         = flag.String("pin", defaultPIN, "PIN required to access the portal (DOMINION_PIN env or .env)")
 		bin         = flag.String("tmux", "tmux", "path to the tmux binary")
 		ttl         = flag.Duration("ttl", 12*time.Hour, "how long a login lasts")
 		useTLS      = flag.Bool("tls", true, "serve HTTPS with a local CA-signed certificate")

@@ -3,6 +3,7 @@
 
 # Local env (PIN etc.)
 env
+.env
 
 # Logs
 *.log

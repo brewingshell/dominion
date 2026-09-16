@@ -8,7 +8,8 @@ it behind a VPN rather than a port forward.
 
 Known, deliberate characteristics (not vulnerabilities):
 
-- A single shared PIN (weak by default, `3232`) — change it via `DOMINION_PIN`.
+- A single shared PIN (weak by default, `1111`) — change it via `DOMINION_PIN`
+  or the `.env` file.
 - HTTPS with a self-signed local CA. Encryption, but no certificate verification
   unless the CA is installed or pinned by a client.
 - Session tokens are held in memory only; a restart logs everyone out.

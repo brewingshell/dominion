@@ -4,14 +4,14 @@
 #   ./install.sh
 #
 # It writes ~/.config/systemd/user/dominion.service with the checkout's real
-# absolute path, creates the env file if missing, and starts the unit. The
+# absolute path, creates the .env file if missing, and starts the unit. The
 # server then runs inside a tmux session named "dominion".
 set -eu
 
 here="$(cd "$(dirname "$0")" && pwd)"
 unit_dir="$HOME/.config/systemd/user"
 unit="$unit_dir/dominion.service"
-env_file="$HOME/.config/dominion/env"
+env_file="$HOME/.config/dominion/.env"
 
 if [ ! -x "$here/dominion" ]; then
   echo "Building dominion..."
@@ -21,8 +21,12 @@ fi
 mkdir -p "$unit_dir" "$HOME/.config/dominion"
 
 if [ ! -f "$env_file" ]; then
-  printf 'DOMINION_PIN=3232\n' > "$env_file"
-  chmod 600 "$env_file"
+  if [ -f "$here/.env.example" ]; then
+    install -m 600 "$here/.env.example" "$env_file"
+  else
+    printf 'DOMINION_PIN=1111\n' > "$env_file"
+    chmod 600 "$env_file"
+  fi
   echo "Wrote $env_file (change the PIN!)."
 fi
 

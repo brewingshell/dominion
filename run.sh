@@ -2,9 +2,9 @@
 # Runs the dominion server inside a tmux session so its log is a live tab in the
 # portal. Launched by dominion.service as: tmux new-session -d -s dominion ...
 #
-# The tmux server may predate the systemd unit, in which case the unit's
-# EnvironmentFile is not inherited here, so source it explicitly. Passing the
-# PIN via the environment (never -pin) keeps it out of ps and pane_start_command.
+# Configuration (the PIN) is read by the server itself from a .env file, so
+# nothing is sourced here. Passing it via the environment or .env rather than
+# -pin keeps it out of ps and pane_start_command.
 set -u
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -14,11 +14,6 @@ addr="${DOMINION_ADDR:-:5550}"
 
 PATH=/usr/local/bin:/usr/bin:/bin
 export PATH
-
-if [ -f "${DOMINION_ENV:-$HOME/.config/dominion/env}" ]; then
-  # shellcheck disable=SC1091
-  . "${DOMINION_ENV:-$HOME/.config/dominion/env}"
-fi
 
 if [ ! -x "$bin" ]; then
   echo "[dominion] $bin not found or not executable; build it with: go build -o dominion ."
