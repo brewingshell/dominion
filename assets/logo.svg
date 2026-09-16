@@ -45,11 +45,11 @@
            L270 350 Z"
         fill="url(#keep)" stroke="url(#edge)" stroke-width="6" stroke-linejoin="round"/>
 
-  <!-- Arched gate: a dark doorway in the keep. -->
-  <path d="M92 320
+  <!-- Arched gate: a dark doorway reaching the base of the keep. -->
+  <path d="M92 350
            L92 222
            A58 58 0 0 1 208 222
-           L208 320 Z"
+           L208 350 Z"
         fill="#2a0a0a" stroke="#f3d6d6" stroke-width="8" stroke-linejoin="round"/>
 
   <!-- Terminal caret inside the gate. -->
