@@ -199,7 +199,8 @@ server-served UI. Neither bundles a browser engine:
 
 The Android app trusts the bundled local CA (encrypted by default); the desktop
 app uses plain HTTP, since WebKitGTK cannot bypass a self-signed certificate.
-Both can change the server from the login screen. See
+Both remember the server, keep a named list of saved servers, and offer a
+settings button (dark/light theme, and server management in a shell). See
 [`apps/README.md`](apps/README.md).
 
 Build them into [`client_app/`](client_app/README.md):

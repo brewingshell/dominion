@@ -129,7 +129,9 @@ export function load(routes = [], options = {}) {
   const hook =
     "globalThis.__dominion={ctrlChar,applyModifiers,activeMods,state,applySessions," +
     "renderSessions,activate,refreshActiveChrome,updateGlobalStatus,stopPolling," +
-    "startPolling,poll,api,inShell,shellChangeTarget};\n";
+    "startPolling,poll,api,inShell,shellChangeTarget,shellSettingsTarget," +
+    "applyTheme,currentTheme," +
+    "TERM_THEMES};\n";
   window.eval(src.slice(0, idx) + hook + src.slice(idx));
 
   const api = window.__dominion;

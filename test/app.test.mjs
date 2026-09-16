@@ -336,3 +336,63 @@ test("change-server button calls the desktop binding", () => {
   el.click();
   assert.equal(called, 1);
 });
+
+test("settings dialog opens and theme toggles to light", () => {
+  const { api, document, window } = load();
+  document.getElementById("settings").click();
+  assert.equal(document.getElementById("settings-dialog").open, true);
+
+  const light = document.querySelector('.seg-btn[data-theme="light"]');
+  light.click();
+  assert.equal(document.documentElement.dataset.theme, "light");
+  assert.equal(api.currentTheme(), "light");
+  assert.equal(light.getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelector('.seg-btn[data-theme="dark"]').getAttribute("aria-pressed"), "false");
+  assert.equal(window.localStorage.getItem("dominion.theme"), "light");
+
+  const dark = document.querySelector('.seg-btn[data-theme="dark"]');
+  dark.click();
+  assert.notEqual(document.documentElement.dataset.theme, "light");
+  assert.equal(window.localStorage.getItem("dominion.theme"), "dark");
+});
+
+test("theme applies to an open terminal", () => {
+  const { api, window } = load();
+  api.applySessions({ sessions: [{ name: "a", windows: 1, attached: false }] });
+  const tab = api.state.tabs.get("a");
+  assert.ok(tab.term, "terminal should exist once activated");
+  api.applyTheme("light");
+  assert.equal(tab.term.options.theme, api.TERM_THEMES.light);
+  api.applyTheme("dark");
+  assert.equal(tab.term.options.theme, api.TERM_THEMES.dark);
+  api.stopPolling();
+});
+
+test("servers section is hidden without a shell, and manage-servers uses the binding", () => {
+  const called = [];
+  const { document } = load([], {
+    beforeEval: (w) => {
+      w.dominionOpenSettings = () => { called.push("open"); };
+      w.dominionChangeURL = () => { called.push("change"); };
+    },
+  });
+  assert.equal(document.getElementById("settings-servers").hidden, false);
+  document.getElementById("manage-servers").click();
+  assert.deepEqual(called, ["open"]);
+});
+
+test("servers section is hidden in a plain browser", () => {
+  const { document } = load();
+  assert.equal(document.getElementById("settings-servers").hidden, true);
+});
+
+test("startup theme from localStorage is reflected on the buttons", () => {
+  const { document } = load([], {
+    beforeEval: (w) => w.localStorage.setItem("dominion.theme", "light"),
+  });
+  assert.equal(document.documentElement.dataset.theme, "light");
+  assert.equal(
+    document.querySelector('.seg-btn[data-theme="light"]').getAttribute("aria-pressed"),
+    "true"
+  );
+});

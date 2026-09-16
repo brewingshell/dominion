@@ -42,10 +42,20 @@ var indexHTML string
 //go:embed www/bootstrap.js
 var bootstrapJS string
 
-type config struct {
+// savedHost is one remembered server in the address book.
+type savedHost struct {
+	Name   string `json:"name"`
 	Host   string `json:"host"`
 	Scheme string `json:"scheme"`
 }
+
+type config struct {
+	Host   string      `json:"host"`
+	Scheme string      `json:"scheme"`
+	Saved  []savedHost `json:"saved,omitempty"`
+}
+
+const maxSavedHosts = 20
 
 func configPath() string {
 	home, _ := os.UserHomeDir()
@@ -77,6 +87,39 @@ func saveConfig(c config) error {
 	return os.WriteFile(path, b, 0o600)
 }
 
+// saveHost upserts a named server, keeping the list bounded.
+func saveHost(entry savedHost) error {
+	c := loadConfig()
+	replaced := false
+	for i := range c.Saved {
+		if c.Saved[i].Name == entry.Name {
+			c.Saved[i] = entry
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		c.Saved = append(c.Saved, entry)
+		if len(c.Saved) > maxSavedHosts {
+			c.Saved = c.Saved[len(c.Saved)-maxSavedHosts:]
+		}
+	}
+	return saveConfig(c)
+}
+
+// deleteHost removes a named server; a missing name is not an error.
+func deleteHost(name string) error {
+	c := loadConfig()
+	out := c.Saved[:0]
+	for _, h := range c.Saved {
+		if h.Name != name {
+			out = append(out, h)
+		}
+	}
+	c.Saved = out
+	return saveConfig(c)
+}
+
 // reachable reports whether the portal answers /healthz. Certificate errors are
 // ignored here: this is a reachability check, not a security decision, and the
 // WebView enforces trust when it actually loads the page.
@@ -96,12 +139,16 @@ func reachable(scheme, host string) bool {
 }
 
 // promptHTML inlines bootstrap.js and the remembered values into the prompt.
-func promptHTML(saved config, errMsg string) string {
+func promptHTML(saved config, errMsg, view string) string {
 	savedJSON, _ := json.Marshal(map[string]string{
 		"host":   saved.Host,
 		"scheme": saved.Scheme,
 	})
 	inline := "<script>window.__dominionSaved=" + string(savedJSON) + ";"
+	if view != "" {
+		viewJSON, _ := json.Marshal(view)
+		inline += "window.__dominionView=" + string(viewJSON) + ";"
+	}
 	if errMsg != "" {
 		msgJSON, _ := json.Marshal(errMsg)
 		inline += "window.__dominionLoadError=" + string(msgJSON) + ";"
@@ -121,7 +168,10 @@ func main() {
 	w.SetSize(1100, 720, webview.HintNone)
 
 	showPrompt := func(errMsg string) {
-		w.SetHtml(promptHTML(loadConfig(), errMsg))
+		w.SetHtml(promptHTML(loadConfig(), errMsg, ""))
+	}
+	showSettings := func() {
+		w.SetHtml(promptHTML(loadConfig(), "", "settings"))
 	}
 
 	// Called by the prompt: probe, persist, then load the portal.
@@ -129,7 +179,11 @@ func main() {
 		if !reachable(scheme, host) {
 			return "", fmt.Errorf("could not reach %s://%s", scheme, host)
 		}
-		if err := saveConfig(config{Host: host, Scheme: scheme}); err != nil {
+		// Preserve the saved-server list while updating the current server.
+		c := loadConfig()
+		c.Host = host
+		c.Scheme = scheme
+		if err := saveConfig(c); err != nil {
 			return "", err
 		}
 		w.Navigate(fmt.Sprintf("%s://%s/", scheme, host))
@@ -144,6 +198,42 @@ func main() {
 		return "ok", nil
 	}); err != nil {
 		log.Fatalf("bind dominionChangeURL: %v", err)
+	}
+
+	// Called by "Manage servers" in the app's settings dialog.
+	if err := w.Bind("dominionOpenSettings", func() (string, error) {
+		w.Dispatch(showSettings)
+		return "ok", nil
+	}); err != nil {
+		log.Fatalf("bind dominionOpenSettings: %v", err)
+	}
+
+	if err := w.Bind("dominionListHosts", func() (string, error) {
+		b, err := json.Marshal(loadConfig().Saved)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}); err != nil {
+		log.Fatalf("bind dominionListHosts: %v", err)
+	}
+
+	if err := w.Bind("dominionSaveHost", func(name, host, scheme string) (string, error) {
+		if err := saveHost(savedHost{Name: name, Host: host, Scheme: scheme}); err != nil {
+			return "", err
+		}
+		return "ok", nil
+	}); err != nil {
+		log.Fatalf("bind dominionSaveHost: %v", err)
+	}
+
+	if err := w.Bind("dominionDeleteHost", func(name string) (string, error) {
+		if err := deleteHost(name); err != nil {
+			return "", err
+		}
+		return "ok", nil
+	}); err != nil {
+		log.Fatalf("bind dominionDeleteHost: %v", err)
 	}
 
 	cfg := loadConfig()

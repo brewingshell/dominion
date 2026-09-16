@@ -47,10 +47,15 @@ HTTP instead of HTTPS. Behaviour differs by shell:
   navigates; on failure it shows the prompt with an error.
 - **Browser** uses a `no-cors` `fetch` probe and offers **Connect anyway**.
 
-**Change server**: the login screen has a *Change server* button, shown only in
-a shell. Desktop calls a Go binding (`dominionChangeURL`); Android reloads its
-own prompt (`https://localhost/?change=1`), detected via the `dominion-shell`
-user-agent marker.
+**Settings**: the app bar has a settings button with an **Appearance** toggle
+(Dark / Light) and, in a native shell, **Manage servers…** which opens this
+screen. Light/dark follows the whole portal UI (login, tabs, terminals, dialogs)
+and is remembered in `localStorage`; the pre-connect prompt stays dark.
+
+**Saved servers**: the shell settings screen remembers servers by name. Pick one
+to connect immediately, or delete it. Stored on desktop in
+`~/.config/dominion/client.json` and on Android in Capacitor Preferences
+(capped at 20).
 
 ## Certificate handling
 

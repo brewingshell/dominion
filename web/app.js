@@ -30,11 +30,17 @@
   const confirmForm = document.getElementById("confirm-form");
   const confirmTextEl = document.getElementById("confirm-text");
   const confirmErrorEl = document.getElementById("confirm-error");
+  const settingsEl = document.getElementById("settings");
+  const settingsDialog = document.getElementById("settings-dialog");
+  const settingsForm = document.getElementById("settings-form");
+  const settingsServersEl = document.getElementById("settings-servers");
+  const manageServersEl = document.getElementById("manage-servers");
   const mobileQuery = window.matchMedia("(max-width: 768px)");
 
   const POLL_MS = 3000;
   const REQUEST_TIMEOUT_MS = 10000;
   const PINNED_SESSION = "dominion";
+  const THEME_PREF = "dominion.theme";
   const KEYS_PREF = "dominion.keys";
   const ACTIVE_PREF = "dominion.active";
   const DESKTOP_FONT = 14;
@@ -62,20 +68,61 @@
     pendingKill: null,
   };
 
-  const TERM_THEME = {
-    background: "#0b0e14",
-    foreground: "#c7ccd6",
-    cursor: "#7aa2f7",
-    selectionBackground: "#2a3040",
-    black: "#151822",
-    red: "#f7768e",
-    green: "#9ece6a",
-    yellow: "#e0af68",
-    blue: "#7aa2f7",
-    magenta: "#bb9af7",
-    cyan: "#7dcfff",
-    white: "#c7ccd6",
+  const TERM_THEMES = {
+    dark: {
+      background: "#0b0e14",
+      foreground: "#c7ccd6",
+      cursor: "#7aa2f7",
+      selectionBackground: "#2a3040",
+      black: "#151822",
+      red: "#f7768e",
+      green: "#9ece6a",
+      yellow: "#e0af68",
+      blue: "#7aa2f7",
+      magenta: "#bb9af7",
+      cyan: "#7dcfff",
+      white: "#c7ccd6",
+    },
+    light: {
+      background: "#f5f6f8",
+      foreground: "#1a1e26",
+      cursor: "#2f6ad9",
+      selectionBackground: "#cdd8ee",
+      black: "#1a1e26",
+      red: "#c2354a",
+      green: "#217a43",
+      yellow: "#96600f",
+      blue: "#2f6ad9",
+      magenta: "#7c3aed",
+      cyan: "#0e7490",
+      white: "#3a4150",
+    },
   };
+
+  function currentTheme() {
+    return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  }
+
+  // applyTheme switches the UI and every open terminal to mode ("dark"/"light").
+  function applyTheme(mode) {
+    const t = mode === "light" ? "light" : "dark";
+    if (t === "light") document.documentElement.dataset.theme = "light";
+    else delete document.documentElement.dataset.theme;
+    try {
+      localStorage.setItem(THEME_PREF, t);
+    } catch {}
+    const termTheme = TERM_THEMES[t];
+    for (const tab of state.tabs.values()) {
+      if (tab.term) {
+        try {
+          tab.term.options.theme = termTheme;
+        } catch {}
+      }
+    }
+    for (const btn of settingsForm.querySelectorAll(".seg-btn")) {
+      btn.setAttribute("aria-pressed", btn.dataset.theme === t ? "true" : "false");
+    }
+  }
 
   async function api(path, opts = {}) {
     const { timeout = REQUEST_TIMEOUT_MS, ...rest } = opts;
@@ -137,12 +184,34 @@
     return "https://localhost/?change=1";
   }
 
+  // shellSettingsTarget is where the shell's own settings screen lives.
+  function shellSettingsTarget() {
+    return "https://localhost/?settings=1";
+  }
+
   changeServerEl.addEventListener("click", () => {
     if (typeof window.dominionChangeURL === "function") {
       window.dominionChangeURL();
       return;
     }
     window.location.href = shellChangeTarget();
+  });
+
+  settingsEl.addEventListener("click", () => {
+    settingsDialog.showModal();
+  });
+
+  for (const btn of settingsForm.querySelectorAll(".seg-btn")) {
+    btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
+  }
+
+  manageServersEl.addEventListener("click", () => {
+    settingsDialog.close();
+    if (typeof window.dominionOpenSettings === "function") {
+      window.dominionOpenSettings();
+      return;
+    }
+    window.location.href = shellSettingsTarget();
   });
 
   function showApp() {
@@ -437,7 +506,7 @@
     btn.addEventListener("click", () => btn.closest("dialog").close());
   }
 
-  for (const dlg of [newDialog, confirmDialog]) {
+  for (const dlg of [newDialog, confirmDialog, settingsDialog]) {
     dlg.addEventListener("click", (e) => {
       if (e.target === dlg) dlg.close();
     });
@@ -649,7 +718,7 @@
       fontSize: termFontSize(),
       lineHeight: 1.15,
       scrollback: 5000,
-      theme: TERM_THEME,
+      theme: TERM_THEMES[currentTheme()],
     });
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
@@ -856,6 +925,13 @@
 
   setKeysVisible(keysAllowed(), false);
   changeServerEl.hidden = !inShell();
+  settingsServersEl.hidden = !inShell();
+  let initialTheme = currentTheme();
+  try {
+    const stored = localStorage.getItem(THEME_PREF);
+    if (stored === "light" || stored === "dark") initialTheme = stored;
+  } catch {}
+  applyTheme(initialTheme);
 
   (async function init() {
     if (await checkAuth()) startPolling();

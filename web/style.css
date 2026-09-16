@@ -4,7 +4,7 @@
   --panel-2: #171b28;
   --border: #232838;
   --text: #c7ccd6;
-  --muted: #6b7385;
+  --muted: #7a8399;
   --accent: #7aa2f7;
   --ok: #9ece6a;
   --warn: #e0af68;
@@ -12,6 +12,30 @@
   --dominion: #5a1414;
   --dominion-hover: #6b1717;
   --dominion-active: #7f1d1d;
+  /* Backdrop wash behind the login card. */
+  --glow: #182036;
+  /* Ink used on top of --accent / status fills. */
+  --on-accent: #0b0e14;
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #eceff4;
+  --border: #d3d8e0;
+  --text: #1a1e26;
+  --muted: #5b6474;
+  --accent: #2f6ad9;
+  --ok: #217a43;
+  --warn: #96600f;
+  --err: #c2354a;
+  --dominion: #7f1d1d;
+  --dominion-hover: #6b1717;
+  --dominion-active: #5a1414;
+  --glow: #dfe6f5;
+  --on-accent: #ffffff;
+  color-scheme: light;
 }
 
 * {
@@ -45,7 +69,7 @@ code {
   inset: 0;
   display: grid;
   place-items: center;
-  background: radial-gradient(1000px 600px at 50% -10%, #182036 0%, var(--bg) 60%);
+  background: radial-gradient(1000px 600px at 50% -10%, var(--glow) 0%, var(--bg) 60%);
   z-index: 10;
 }
 
@@ -108,7 +132,7 @@ code {
   padding: 11px 14px;
   font-size: 14px;
   font-weight: 600;
-  color: #0b0e14;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: 8px;
@@ -233,7 +257,7 @@ code {
 }
 
 .btn-primary {
-  color: #0b0e14;
+  color: var(--on-accent);
   background: var(--accent);
   border: 1px solid var(--accent);
 }
@@ -243,13 +267,65 @@ code {
 }
 
 .btn-danger {
-  color: #0b0e14;
+  color: var(--on-accent);
   background: var(--err);
   border: 1px solid var(--err);
 }
 
 .btn-danger:hover {
   filter: brightness(1.08);
+}
+
+/* Settings dialog */
+.dialog-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.seg {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg-btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--muted);
+  background: var(--bg);
+  border: none;
+  cursor: pointer;
+}
+
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--border);
+}
+
+.seg-btn[aria-pressed="true"] {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+#settings-servers {
+  margin-top: 20px;
+}
+
+#settings-servers[hidden] {
+  display: none;
+}
+
+.btn-ghost.wide {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
 }
 
 /* App shell */
@@ -445,6 +521,7 @@ code {
 }
 
 #new-session,
+#settings,
 #lock,
 #logout {
   width: 30px;
@@ -459,11 +536,13 @@ code {
   font-size: 14px;
 }
 
+#settings svg,
 #lock svg {
   display: block;
 }
 
 #new-session:hover,
+#settings:hover,
 #lock:hover {
   color: var(--accent);
   border-color: var(--accent);
@@ -764,13 +843,13 @@ code {
   }
 
   .key.armed {
-    color: #0b0e14;
+    color: var(--on-accent);
     background: var(--accent);
     border-color: var(--accent);
   }
 
   .key:active {
-    color: #0b0e14;
+    color: var(--on-accent);
     background: var(--accent);
     border-color: var(--accent);
   }

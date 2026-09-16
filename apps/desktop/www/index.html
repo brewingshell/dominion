@@ -28,11 +28,27 @@
   .err { margin:12px 0 0; color:var(--err); font-size:13px; }
   .row { display:flex; gap:10px; align-items:center; margin-top:14px; font-size:12px; color:var(--muted); }
   .row input { width:auto; }
+  .link { margin-top:10px; color:var(--muted); background:transparent; border:none; font-weight:500; }
+  .link:hover { color:var(--text); }
+  h2 { margin:22px 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600; }
+  h2:first-of-type { margin-top:6px; }
+  ul.hosts { list-style:none; margin:0; padding:0; }
+  ul.hosts li { display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--border); }
+  ul.hosts li .meta { flex:1; min-width:0; }
+  ul.hosts .hname { display:block; font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  ul.hosts .hurl { display:block; font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  ul.hosts button { width:auto; margin:0; padding:7px 10px; font-size:12px; }
+  .host-del { color:var(--err); background:transparent; border:1px solid var(--border); }
+  .host-del:hover { border-color:var(--err); }
+  .empty-hosts { margin:6px 0 0; font-size:13px; color:var(--muted); }
+  #view-settings { display:none; }
+  body[data-view="settings"] #view-connect { display:none; }
+  body[data-view="settings"] #view-settings { display:block; }
 </style>
 </head>
 <body>
 <main>
-  <form id="connect">
+  <form id="view-connect">
     <h1>dominion</h1>
     <p class="sub">Enter the portal address</p>
     <label for="host">Host and port</label>
@@ -44,7 +60,31 @@
     </div>
     <button id="go" type="submit">Connect</button>
     <button id="force" type="button" hidden>Connect anyway</button>
+    <button id="open-settings" type="button" class="link">Settings</button>
     <p id="error" class="err" hidden></p>
+  </form>
+
+  <form id="view-settings">
+    <h1>Settings</h1>
+    <p class="sub">Servers</p>
+    <label for="s-host">Host and port</label>
+    <input id="s-host" type="text" inputmode="url" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="YOUR-HOST:5550">
+    <div class="row">
+      <input id="s-insecure" type="checkbox">
+      <label for="s-insecure" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Use plain HTTP instead of HTTPS</label>
+    </div>
+    <label for="s-name" style="margin-top:14px">Save as (optional)</label>
+    <input id="s-name" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name for this server">
+    <button id="s-apply" type="submit">Connect</button>
+    <button id="s-save" type="button">Save this server</button>
+
+    <h2>Saved servers</h2>
+    <ul class="hosts" id="host-list"></ul>
+    <p class="empty-hosts" id="hosts-empty" hidden>No saved servers yet.</p>
+
+    <button id="close-settings" type="button" class="link">Back</button>
+    <p id="s-error" class="err" hidden></p>
   </form>
 </main>
 <script src="bootstrap.js"></script>

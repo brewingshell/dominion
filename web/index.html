@@ -11,6 +11,15 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/xterm.css">
 <link rel="stylesheet" href="/style.css">
+<script>
+  // Apply the saved theme before first paint to avoid a flash.
+  (function () {
+    try {
+      var t = localStorage.getItem("dominion.theme") || "dark";
+      if (t === "light") document.documentElement.dataset.theme = "light";
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
   <div id="app" hidden>
@@ -30,6 +39,13 @@
         <span id="status" class="status" role="status" aria-live="polite"></span>
         <button id="keys-toggle" type="button" aria-pressed="false" title="Toggle keys" aria-label="Show terminal keys">&#x2328;</button>
         <button id="new-session" type="button" title="New session" aria-label="New session">&#x2b;</button>
+        <button id="settings" type="button" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
         <button id="lock" type="button" title="Lock" aria-label="Lock">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">
             <path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -78,6 +94,24 @@
       <div class="dialog-actions">
         <button type="button" class="btn-ghost" data-close>Cancel</button>
         <button type="submit" class="btn-danger" id="confirm-kill">Kill</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+    <form id="settings-form" method="dialog">
+      <h2 id="settings-title">Settings</h2>
+      <p class="dialog-label">Appearance</p>
+      <div class="seg" role="group" aria-label="Theme">
+        <button type="button" class="seg-btn" data-theme="dark" aria-pressed="false">Dark</button>
+        <button type="button" class="seg-btn" data-theme="light" aria-pressed="false">Light</button>
+      </div>
+      <div id="settings-servers" hidden>
+        <p class="dialog-label">Servers</p>
+        <button type="button" class="btn-ghost wide" id="manage-servers">Manage servers&hellip;</button>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn-primary" data-close>Done</button>
       </div>
     </form>
   </dialog>
