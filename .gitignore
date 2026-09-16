@@ -1,0 +1,19 @@
+# Built binary
+/dominion
+
+# Local env (PIN etc.)
+env
+
+# Logs
+*.log
+
+# Node dev tooling (JS tests only)
+node_modules/
+
+# Client app build artifacts
+apps/dist/
+apps/android/
+apps/android-overlay/res-raw/
+
+# Branding override (kept local)
+assets/override_logo.*

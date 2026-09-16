@@ -1,0 +1,26 @@
+[Unit]
+Description=dominion - LAN web portal for tmux sessions
+After=network.target
+
+[Service]
+# The server runs inside a tmux session named "dominion", so its log is the
+# first tab in the portal. tmux detaches, so there is no tracked main PID:
+# RemainAfterExit keeps the unit active while the pane loops the server.
+#
+# Replace __INSTALL_DIR__ with the absolute path of your checkout (install.sh
+# does this automatically).
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=/usr/bin/tmux new-session -d -s dominion -c __INSTALL_DIR__ __INSTALL_DIR__/run.sh
+ExecStop=/usr/bin/tmux kill-session -t dominion
+# The tmux server may live outside this unit's cgroup (it is often started by a
+# terminal). KillMode=process plus ExecStop ensures stopping the unit tears down
+# only the dominion session, never the user's other tmux sessions.
+KillMode=process
+# tmux's socket lives in /tmp/tmux-$UID and its config in $HOME, so
+# PrivateTmp/ProtectHome must stay off.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

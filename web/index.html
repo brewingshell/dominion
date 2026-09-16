@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e14">
+<title>dominion</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/apple-touch-icon.png" sizes="180x180">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/vendor/xterm.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app" hidden>
+    <header id="bar">
+      <button id="menu-toggle" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Show sessions">
+        <span class="hamburger" aria-hidden="true"></span>
+      </button>
+      <span id="current" class="current" aria-hidden="true"></span>
+      <div id="drawer">
+        <div id="drawer-head">
+          <span>Sessions</span>
+          <button id="drawer-close" type="button" aria-label="Close menu">&times;</button>
+        </div>
+        <div id="tablist" role="tablist" aria-label="tmux sessions" aria-orientation="horizontal"></div>
+      </div>
+      <div id="actions">
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+        <button id="keys-toggle" type="button" aria-pressed="false" title="Toggle keys" aria-label="Show terminal keys">&#x2328;</button>
+        <button id="new-session" type="button" title="New session" aria-label="New session">&#x2b;</button>
+        <button id="lock" type="button" title="Lock" aria-label="Lock">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">
+            <path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="4.5" y="10" width="15" height="10.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button id="logout" type="button" title="Log out" aria-label="Log out">&#x23FB;</button>
+      </div>
+    </header>
+    <div id="scrim" class="scrim"></div>
+    <main id="terminals"></main>
+    <div id="keys" role="toolbar" aria-label="Terminal keys" hidden>
+      <button class="key" type="button" data-key="esc" aria-label="Escape">Esc</button>
+      <button class="key" type="button" data-key="tab" aria-label="Tab">Tab</button>
+      <button class="key key-mod" type="button" data-mod="ctrl" aria-pressed="false" aria-label="Control">Ctrl</button>
+      <button class="key key-mod" type="button" data-mod="alt" aria-pressed="false" aria-label="Alt">Alt</button>
+      <button class="key key-arrow" type="button" data-key="left" aria-label="Arrow left">&#x2190;</button>
+      <button class="key key-arrow" type="button" data-key="up" aria-label="Arrow up">&#x2191;</button>
+      <button class="key key-arrow" type="button" data-key="down" aria-label="Arrow down">&#x2193;</button>
+      <button class="key key-arrow" type="button" data-key="right" aria-label="Arrow right">&#x2192;</button>
+    </div>
+    <div id="empty" class="empty" hidden>
+      <p>No tmux sessions found.</p>
+      <p class="muted">Create one with <code>tmux new -s name</code>, or use the <strong>+</strong> button above.</p>
+    </div>
+  </div>
+
+  <dialog id="new-dialog" class="dialog" aria-labelledby="new-title">
+    <form id="new-form" method="dialog" autocomplete="off">
+      <h2 id="new-title">New session</h2>
+      <label for="new-name">Session name</label>
+      <input id="new-name" name="name" type="text" maxlength="128" autocomplete="off" spellcheck="false">
+      <p id="new-error" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn-primary">Create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="dialog" aria-labelledby="confirm-title">
+    <form id="confirm-form" method="dialog">
+      <h2 id="confirm-title">Kill session</h2>
+      <p id="confirm-text" class="dialog-text"></p>
+      <p id="confirm-error" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn-danger" id="confirm-kill">Kill</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="login" class="overlay">
+    <form id="login-form" autocomplete="off">
+      <img class="logo" src="/dom-logo.png" alt="" width="141" height="220">
+      <h1>dominion</h1>
+      <p class="muted" id="login-sub">Enter PIN to continue</p>
+      <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" autofocus aria-label="PIN">
+      <button type="submit">Unlock</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </div>
+
+  <script src="/vendor/xterm.js"></script>
+  <script src="/vendor/addon-fit.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

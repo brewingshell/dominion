@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>dominion</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#12151f; --border:#232838; --text:#c7ccd6; --muted:#6b7385; --accent:#7aa2f7; --err:#f7768e; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { height:100%; display:grid; place-items:center; padding:24px;
+    background: radial-gradient(1000px 600px at 50% -10%, #182036 0%, var(--bg) 60%); }
+  form { width:min(92vw,340px); padding:26px; background:var(--panel); border:1px solid var(--border);
+    border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+  h1 { margin:0 0 4px; font-size:20px; letter-spacing:.14em; font-weight:600; }
+  p.sub { margin:0 0 18px; color:var(--muted); font-size:13px; }
+  label { display:block; margin-bottom:6px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  input { width:100%; padding:11px 13px; font-size:16px; color:var(--text); background:var(--bg);
+    border:1px solid var(--border); border-radius:8px; outline:none; }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(122,162,247,.18); }
+  button { width:100%; margin-top:14px; padding:11px 14px; font-size:14px; font-weight:600;
+    color:#0b0e14; background:var(--accent); border:none; border-radius:8px; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  .err { margin:12px 0 0; color:var(--err); font-size:13px; }
+  .row { display:flex; gap:10px; align-items:center; margin-top:14px; font-size:12px; color:var(--muted); }
+  .row input { width:auto; }
+</style>
+</head>
+<body>
+<main>
+  <form id="connect">
+    <h1>dominion</h1>
+    <p class="sub">Enter the portal address</p>
+    <label for="host">Host and port</label>
+    <input id="host" type="text" inputmode="url" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="YOUR-HOST:5550">
+    <div class="row">
+      <input id="insecure" type="checkbox">
+      <label for="insecure" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Connect over plain HTTP instead of HTTPS</label>
+    </div>
+    <button id="go" type="submit">Connect</button>
+    <p id="error" class="err" hidden></p>
+  </form>
+</main>
+<script src="bootstrap.js"></script>
+</body>
+</html>

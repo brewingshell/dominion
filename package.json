@@ -1,0 +1,12 @@
+{
+  "name": "dominion-web-tests",
+  "private": true,
+  "description": "Dev-only test harness for web/app.js (not shipped; assets are embedded via go:embed).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}
