@@ -106,6 +106,15 @@ tmux detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`),
 and `KillMode=process` plus `ExecStop` ensure stopping the unit tears down only
 the `dominion` session, never your other tmux sessions.
 
+`run.sh` reads a few environment variables if you need to override its defaults:
+
+| Variable        | Default                      | Purpose                              |
+|-----------------|------------------------------|--------------------------------------|
+| `DOMINION_BIN`  | `<checkout>/dominion`        | Server binary to run.                |
+| `DOMINION_ADDR` | `:5550`                      | Listen address.                      |
+| `DOMINION_TMUX` | `/usr/bin/tmux`              | tmux binary.                         |
+| `DOMINION_ENV`  | `~/.config/dominion/.env`    | Config file passed to the server.    |
+
 ## TLS
 
 The server generates a local CA plus a leaf certificate on first start. The CA is

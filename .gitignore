@@ -16,9 +16,11 @@ apps/android/
 apps/android-overlay/res-raw/
 
 # Desktop client build byproducts
-apps/desktop/www/
+# (apps/desktop/www/ is tracked: go:embed cannot reach ../www, so it is a
+# synced copy of apps/www and is committed so the module builds from a clone.)
 apps/desktop/.pkgconfig/
 apps/desktop/dominion-desktop
+apps/desktop/desktop
 apps/.appimagetool
 
 # Built client binaries (keep the READMEs, ignore the outputs)

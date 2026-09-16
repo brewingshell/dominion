@@ -95,8 +95,19 @@ plate). Regenerate the square icons from the source marks with
 `./icons/regenerate.sh`.
 
 > Desktop note: `webview_go` asks pkg-config for `webkit2gtk-4.0`, which
-> Debian 13 dropped. `build-desktop.sh` generates a shim `.pc` from the installed
-> 4.1 one (the library is `dlopen`ed as 4.1 at runtime).
+> Debian 13 and Ubuntu 24.04 dropped (they ship only 4.1, which the library
+> `dlopen`s at runtime). `build-desktop.sh` and CI run `desktop/gen-pkgconfig.sh`
+> first. To build the module by hand:
+>
+> ```sh
+> cd desktop
+> go generate ./...                                  # writes .pkgconfig/webkit2gtk-4.0.pc
+> PKG_CONFIG_PATH=$PWD/.pkgconfig go build .
+> ```
+>
+> `desktop/www/` is a tracked, synced copy of `apps/www/` (`go:embed` cannot
+> reach outside the module); `build-desktop.sh` and CI diff the two and fail on
+> drift.
 
 ## Publish
 

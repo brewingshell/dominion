@@ -8,19 +8,26 @@ reproduced or referenced below; the full texts ship with each project.
 - **xterm.js** — MIT License — https://github.com/xtermjs/xterm.js
 - **@xterm/addon-fit** — MIT License — https://github.com/xtermjs/xterm.js
 
-## Go modules
+## Go (server)
 
 - **github.com/creack/pty** — BSD 3-Clause License —
   https://github.com/creack/pty
 - **github.com/gorilla/websocket** — BSD 3-Clause License —
   https://github.com/gorilla/websocket
 
-## Client apps (`apps/`, development only)
+## Client apps (`apps/`)
 
-The native shells are built with:
+Android shell:
 
 - **Capacitor** (`@capacitor/*`) — MIT License — https://capacitorjs.com
-- **Electron** — MIT License — https://electronjs.org
-- **electron-builder** — MIT License — https://electron.build
 
-These are build-time dependencies and are not embedded in the Go server binary.
+Desktop shell (Go + system WebView):
+
+- **github.com/webview/webview_go** — MIT License —
+  https://github.com/webview/webview_go
+- **WebKitGTK** — LGPL-2.1-or-later / BSD — https://webkitgtk.org
+- **GTK 3** — LGPL-2.1-or-later — https://gtk.org
+
+WebKitGTK and GTK are **runtime dependencies of the host system**, linked
+dynamically and not bundled into the AppImage. Capacitor and webview_go are
+build-time dependencies and not embedded in the Go server binary.

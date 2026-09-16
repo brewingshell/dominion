@@ -4,11 +4,22 @@
 // loads the server UI in the system WebView (WebKitGTK), so there is no bundled
 // browser: the binary is a few megabytes instead of Electron's ~170 MB.
 //
+// www/ is a synced copy of ../../www (go:embed cannot reach outside the module);
+// keep it in step with apps/build-desktop.sh or `diff` against it.
+//
+// webview_go asks pkg-config for webkit2gtk-4.0, which Debian 13/Ubuntu 24.04 do
+// not ship (only 4.1). Generate a shim before building:
+//
+//	go generate ./...   # runs gen-pkgconfig.sh
+//	PKG_CONFIG_PATH=$PWD/.pkgconfig go build .
+//
 // The server address is remembered in ~/.config/dominion/client.json. On launch
 // the shell probes it and, if reachable, goes straight to the portal; otherwise
 // it shows the prompt with an error. "Change server" on the login screen calls
 // back into this program, which re-shows the prompt.
 package main
+
+//go:generate ./gen-pkgconfig.sh
 
 import (
 	"crypto/tls"

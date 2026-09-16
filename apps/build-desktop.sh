@@ -25,19 +25,21 @@ pkg-config --exists gtk+-3.0 || { echo "missing libgtk-3-dev" >&2; exit 1; }
 pkg-config --exists webkit2gtk-4.1 || { echo "missing libwebkit2gtk-4.1-dev" >&2; exit 1; }
 
 # webview_go asks pkg-config for webkit2gtk-4.0, which Debian 13 dropped. The
-# bundled header dlopen()s libwebkit2gtk-4.1 at runtime, so a shim .pc that is a
-# copy of the installed 4.1 one is all that is needed.
+# shim script copies the installed 4.1 .pc under that name.
 shim_dir="$desktop/.pkgconfig"
-mkdir -p "$shim_dir"
-# Only the module name changes (pkg-config looks it up by filename); the Libs
-# inside still reference the installed 4.1 library, which is correct.
-sed 's/^Name:.*/Name: webkit2gtk-4.0/' \
-  /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc > "$shim_dir/webkit2gtk-4.0.pc"
+"$desktop/gen-pkgconfig.sh"
 
-# The Go embed directives cannot reach ../www, so stage a copy.
-rm -rf "$desktop/www"
+# The Go embed directives cannot reach ../www, so desktop/www is a synced copy.
+# It is tracked (so the module builds from a clone); refresh it here and fail
+# loudly if it drifts from the source.
 mkdir -p "$desktop/www"
 cp "$here/www/index.html" "$here/www/bootstrap.js" "$desktop/www/"
+for f in index.html bootstrap.js; do
+  if ! diff -q "$here/www/$f" "$desktop/www/$f" >/dev/null; then
+    echo "desktop/www/$f is out of sync with www/$f" >&2
+    exit 1
+  fi
+done
 
 echo "==> building desktop binary"
 ( cd "$desktop" && \
@@ -83,7 +85,7 @@ echo "==> packaging $base.AppImage"
 rm -f "$out/$base.AppImage"
 ARCH=x86_64 "$tool" --appimage-extract-and-run "$appdir" "$out/$base.AppImage" >/dev/null
 
-# Clean staging.
-rm -rf "$desktop/www" "$desktop/dominion-desktop"
+# Remove the built binary; desktop/www is tracked, so leave it in place.
+rm -f "$desktop/dominion-desktop"
 echo
 ls -lh "$out/$base.AppImage"
