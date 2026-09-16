@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"embed"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -51,6 +53,8 @@ func main() {
 		tlsCA       = flag.String("tls-ca", "", "use this CA certificate file instead of generating one")
 		fingerprint = flag.Bool("fingerprint", false, "print the CA fingerprint and exit")
 		brandingDir = flag.String("branding", "assets", "directory of logo overrides (override_logo.*, logo.*)")
+		allowHTTP   = flag.Bool("allow-http", true, "also accept plain HTTP on the same port (less secure)")
+		secureCook  = flag.Bool("secure-cookies", false, "force the Secure cookie attribute (set behind a TLS-terminating proxy)")
 	)
 	flag.Var(&sans, "tls-san", "extra DNS name or IP for the certificate (repeatable)")
 	flag.Parse()
@@ -95,7 +99,7 @@ func main() {
 		TokenTTL:      *ttl,
 		WebFS:         webFS,
 		Logger:        log.Default(),
-		SecureCookies: *useTLS,
+		SecureCookies: *secureCook,
 		BrandingDir:   *brandingDir,
 	})
 
@@ -113,19 +117,43 @@ func main() {
 
 	errc := make(chan error, 1)
 	go func() {
-		if *useTLS {
-			log.Printf("dominion listening on %s over HTTPS (tmux: %s)", *addr, *bin)
-			log.Printf("CA certificate: %s", caFile)
-			if caFingerprint != "" {
-				log.Printf("CA SHA-256 fingerprint: %s", caFingerprint)
-			}
-			if err := httpSrv.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+		if !*useTLS {
+			log.Printf("dominion listening on %s over HTTP (tmux: %s)", *addr, *bin)
+			if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				errc <- err
 			}
 			return
 		}
-		log.Printf("dominion listening on %s over HTTP (tmux: %s)", *addr, *bin)
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			errc <- fmt.Errorf("load certificate: %w", err)
+			return
+		}
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+			// WebSocket upgrades are HTTP/1.1; don't advertise h2 we don't serve.
+			NextProtos: []string{"http/1.1"},
+		}
+
+		ln, err := net.Listen("tcp", *addr)
+		if err != nil {
+			errc <- err
+			return
+		}
+		if *allowHTTP {
+			ln = &peekListener{Listener: ln, tlsConfig: tlsConfig}
+			log.Printf("dominion listening on %s over HTTPS and HTTP (tmux: %s)", *addr, *bin)
+		} else {
+			ln = tls.NewListener(ln, tlsConfig)
+			log.Printf("dominion listening on %s over HTTPS (tmux: %s)", *addr, *bin)
+		}
+		log.Printf("CA certificate: %s", caFile)
+		if caFingerprint != "" {
+			log.Printf("CA SHA-256 fingerprint: %s", caFingerprint)
+		}
+		if err := httpSrv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			errc <- err
 		}
 	}()

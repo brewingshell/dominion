@@ -29,8 +29,9 @@ type token struct {
 	locked bool
 }
 
-// NewStore creates a token store. Token lifetime is ttl. secure marks the auth
-// cookie Secure (set when serving over TLS).
+// NewStore creates a token store. Token lifetime is ttl. secure forces the
+// Secure cookie attribute on every cookie, for a TLS-terminating proxy; when
+// false, callers decide per request from the connection.
 func NewStore(pin string, ttl time.Duration, secure bool) *Store {
 	return &Store{
 		pin:    pin,
@@ -129,27 +130,29 @@ func (s *Store) Revoke(tok string) {
 	s.mu.Unlock()
 }
 
-// SetCookie writes the auth cookie for a token.
-func (s *Store) SetCookie(w http.ResponseWriter, tok string) {
+// SetCookie writes the auth cookie for a token. requestSecure is true when the
+// request arrived over TLS; the store's configured secure flag forces it on
+// regardless (for a TLS-terminating proxy in front of the server).
+func (s *Store) SetCookie(w http.ResponseWriter, tok string, requestSecure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    tok,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   s.secure,
+		Secure:   s.secure || requestSecure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(s.ttl.Seconds()),
 	})
 }
 
 // ClearCookie expires the auth cookie.
-func (s *Store) ClearCookie(w http.ResponseWriter) {
+func (s *Store) ClearCookie(w http.ResponseWriter, requestSecure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   s.secure,
+		Secure:   s.secure || requestSecure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})

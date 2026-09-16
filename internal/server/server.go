@@ -353,7 +353,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.limiter.Reset(key)
-	s.auth.SetCookie(w, tok)
+	s.auth.SetCookie(w, tok, r.TLS != nil)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -369,7 +369,7 @@ func (s *Server) handleLock(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(auth.CookieName); err == nil {
 		s.auth.Lock(c.Value)
 	}
-	s.auth.ClearCookie(w)
+	s.auth.ClearCookie(w, r.TLS != nil)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -381,7 +381,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(auth.CookieName); err == nil {
 		s.auth.Revoke(c.Value)
 	}
-	s.auth.ClearCookie(w)
+	s.auth.ClearCookie(w, r.TLS != nil)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 

@@ -31,6 +31,10 @@ dominion is a door to your shells. Read this before exposing it to anything.
   `apps/`), the certificate is **not verified**, so it does not protect against
   a man-in-the-middle on the LAN path. Installing the CA upgrades this to full
   verification.
+- **Plain HTTP is accepted by default**, on the same port, for convenience: an
+  `http://` request is served without encryption, so the PIN and session cookie
+  travel in the clear. On a trusted LAN that is usually fine; if you would rather
+  refuse it, run with `-allow-http=false` (or `-tls=false` for HTTP only).
 - **The portal can create and kill tmux sessions.** Killing a session ends every
   process inside it. The `dominion` session that hosts the server is protected
   and cannot be killed.
@@ -92,20 +96,32 @@ detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`), and
 
 ## TLS
 
-The server generates a local CA plus a leaf certificate on first start and serves
-HTTPS-only on `:5550`. The CA is persisted, so its fingerprint is stable across
-restarts; the leaf is regenerated each start with the host's current IPs.
+The server generates a local CA plus a leaf certificate on first start. The CA is
+persisted, so its fingerprint is stable across restarts; the leaf is regenerated
+each start with the host's current IPs.
+
+By default the **same port answers both `https://` and `http://`**: the listener
+peeks the first byte of each connection (a TLS handshake starts with `0x16`) and
+routes it to TLS or plain HTTP. That way a bare `host:5550` or an `http://`
+bookmark still reaches the login page instead of failing. Pass `-allow-http=false`
+to refuse plaintext.
 
 ```sh
 ./dominion -fingerprint          # print the CA path and SHA-256 fingerprint
-./dominion -tls=false            # serve plain HTTP instead
+./dominion -tls=false            # serve HTTP only
+./dominion -allow-http=false     # HTTPS only (reject plaintext)
 ./dominion -tls-cert cert.pem -tls-key key.pem -tls-ca ca.pem
 ./dominion -tls-san portal.lan   # extra SAN (repeatable)
+./dominion -secure-cookies       # force Secure cookies (behind a TLS proxy)
 ```
 
 Files live in `~/.config/dominion` (`ca.pem`, `ca-key.pem` 0600, `cert.pem`,
 `key.pem`). Install `ca.pem` into your device trust store to remove the browser
 warning; the native apps under `apps/` can pin it without any warning.
+
+The auth cookie is marked `Secure` only when the request that set it arrived over
+TLS (or when `-secure-cookies` is set), so logging in over plain HTTP works while
+HTTPS sessions stay protected.
 
 ## Flags
 
@@ -115,7 +131,9 @@ warning; the native apps under `apps/` can pin it without any warning.
 | `-pin`         | `$DOMINION_PIN` or `3232` | PIN required to access the portal.               |
 | `-tmux`        | `tmux`                 | Path to the tmux binary.                           |
 | `-ttl`         | `12h`                  | How long a login lasts.                            |
-| `-tls`         | `true`                 | Serve HTTPS with a local CA-signed certificate.    |
+| `-tls`         | `true`                 | Serve TLS with a local CA-signed certificate.      |
+| `-allow-http`  | `true`                 | Also accept plain HTTP on the same port.           |
+| `-secure-cookies` | `false`             | Force the `Secure` cookie attribute (TLS proxy).   |
 | `-tls-dir`     | `~/.config/dominion`   | Where the CA and certificate files live.           |
 | `-tls-cert`, `-tls-key`, `-tls-ca` | generated | Use existing certificate material.              |
 | `-tls-san`     | none                   | Extra DNS name or IP for the certificate (repeatable). |

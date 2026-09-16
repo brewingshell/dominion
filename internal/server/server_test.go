@@ -319,6 +319,26 @@ func TestSecureCookieWhenTLS(t *testing.T) {
 	t.Fatal("no auth cookie returned")
 }
 
+// TestPlainHTTPCookieNotSecure verifies that over plain HTTP the cookie is not
+// marked Secure, so a login over http:// still works when HTTP is accepted.
+func TestPlainHTTPCookieNotSecure(t *testing.T) {
+	ts := newTestServer(t)
+	res, err := http.Post(ts.URL+"/api/login", "application/json", strings.NewReader(`{"pin":"3232"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	for _, c := range res.Cookies() {
+		if c.Name == "dominion_auth" {
+			if c.Secure {
+				t.Error("cookie must not be Secure on a plain HTTP request")
+			}
+			return
+		}
+	}
+	t.Fatal("no auth cookie returned")
+}
+
 func TestBrandingOverrideWins(t *testing.T) {
 	dir := t.TempDir()
 	png := []byte("\x89PNG\r\n\x1a\noverride")
