@@ -29,27 +29,33 @@ cd "$here"
 mkdir -p "$out"
 
 echo "==> $base: AppImage"
-npx electron-builder --linux AppImage --config.linux.icon="$icon" >/dev/null
+# electron-builder writes <productName>-<version>.AppImage; clear any previous
+# one first so a stale file is never mistaken for this build's output.
+rm -f "$out"/dominion-*.AppImage
 rm -f "$out/$base.AppImage"
+npx electron-builder --linux AppImage --config.linux.icon="$icon" >/dev/null
 if [ -f "$out"/dominion-*.AppImage ]; then
   mv "$out"/dominion-*.AppImage "$out/$base.AppImage"
 fi
 chmod +x "$out/$base.AppImage"
 
 echo "==> $base: Android launcher icons"
-bg="${BG_COLOR:-#0b0e14}"
+# Transparent by default: the mark is drawn with alpha and no plate behind it.
+# Set BG_COLOR=#rrggbb to put a solid adaptive-icon background back.
+bg="${BG_COLOR:-#00000000}"
 cat > "$android_res/values/ic_launcher_background.xml" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">$bg</color>
 </resources>
 EOF
+# PNG32 forces an alpha channel so transparency survives the resize.
 for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
   dens="${d%%:*}"; size="${d##*:}"
   fg_size=$(( size * 108 / 48 ))
-  convert "$icon" -resize "${size}x${size}" "$android_res/mipmap-$dens/ic_launcher.png"
-  convert "$icon" -resize "${size}x${size}" "$android_res/mipmap-$dens/ic_launcher_round.png"
-  convert "$fg" -resize "${fg_size}x${fg_size}" "$android_res/mipmap-$dens/ic_launcher_foreground.png"
+  convert "$icon" -resize "${size}x${size}" PNG32:"$android_res/mipmap-$dens/ic_launcher.png"
+  convert "$icon" -resize "${size}x${size}" PNG32:"$android_res/mipmap-$dens/ic_launcher_round.png"
+  convert "$fg" -resize "${fg_size}x${fg_size}" PNG32:"$android_res/mipmap-$dens/ic_launcher_foreground.png"
 done
 
 echo "==> $base: Android APK"

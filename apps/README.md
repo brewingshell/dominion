@@ -83,7 +83,15 @@ output name:
 
 Arguments: output base name, a 1024×1024 square app icon, and a 1024×1024
 transparent Android adaptive-foreground. `icons/original.png` is the project
-mark. Set `BG_COLOR` to change the adaptive-icon background (default `#0b0e14`).
+mark. Launcher icons are drawn with alpha and the adaptive background is
+transparent by default; set `BG_COLOR=#rrggbb` for a solid plate. Regenerate the
+square icons from the source marks with `./icons/regenerate.sh`.
+
+### Publish
+
+```sh
+./release.sh 0.1     # builds dominion_0.1.* and uploads to GitHub release v0.1
+```
 
 ### Desktop (AppImage)
 
