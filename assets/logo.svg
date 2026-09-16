@@ -45,16 +45,14 @@
            L270 350 Z"
         fill="url(#keep)" stroke="url(#edge)" stroke-width="6" stroke-linejoin="round"/>
 
-  <!-- A large, centered "D" (roman D, not a gate). -->
-  <path d="M92 164
-           L92 320
-           L150 320
-           C186 320 208 286 208 242
-           C208 198 186 164 150 164
-           Z"
+  <!-- Arched gate: a dark doorway in the keep. -->
+  <path d="M92 320
+           L92 222
+           A58 58 0 0 1 208 222
+           L208 320 Z"
         fill="#2a0a0a" stroke="#f3d6d6" stroke-width="8" stroke-linejoin="round"/>
 
-  <!-- Terminal caret inside the D. -->
-  <path d="M128 210 L157 242 L128 274" fill="none" stroke="#ffb4b4" stroke-width="11"
+  <!-- Terminal caret inside the gate. -->
+  <path d="M128 228 L158 258 L128 288" fill="none" stroke="#ffb4b4" stroke-width="11"
         stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
