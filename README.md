@@ -1,22 +1,23 @@
-# dominion
+<p align="center">
+  <img src="assets/logo.png" alt="dominion" height="150">
+</p>
 
-A tiny, self-hosted web portal for **tmux**. Every tmux session on the machine
-becomes a tab, and each tab is a fully interactive terminal in the browser. One
-Go binary, no runtime dependencies, no database.
+<h1 align="center">dominion</h1>
 
-It is built for a **trusted LAN**: reach your shells from a phone or laptop
-without SSH clients or port forwarding.
+<p align="center">
+  A tiny, self-hosted web portal for <b>tmux</b>. Every tmux session on the
+  machine becomes a tab, and each tab is a fully interactive terminal in the
+  browser. One Go binary, no runtime dependencies, no database.
+</p>
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  dominion │ adjutant │ aiur │ comfy │ rabota │  ⏻  [+]   │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  $ tmux ls                                               │
-│  adjutant: 1 windows (created ...)                       │
-│  _                                                       │
-└──────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  It is built for a <b>trusted LAN</b>: reach your shells from a phone or laptop
+  without SSH clients or port forwarding.
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/screen_dominion.png" alt="dominion login screen" width="760">
+</p>
 
 ## Security first
 
