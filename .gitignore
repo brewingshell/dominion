@@ -20,6 +20,9 @@ apps/android-overlay/res-raw/
 *.apk
 *.AppImage
 *.AppImage.zsync
+# Distributable Android build is committed; the AppImage exceeds the 100 MiB
+# git limit and is attached to a GitHub release instead (see apps/release.sh).
+!/client_app/dominion_0.1.apk
 apps/dist/
 apps/android/app/build/
 apps/android/.gradle/
