@@ -1,6 +1,9 @@
 # Built binary
 /dominion
 
+# Release staging (release.sh)
+/dist/
+
 # Local env (PIN etc.)
 env
 .env

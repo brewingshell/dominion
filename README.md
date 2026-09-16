@@ -19,6 +19,28 @@
   <img src="assets/screenshots/screen_dominion.png" alt="dominion login screen" width="760">
 </p>
 
+## Install
+
+One line, from the latest [release](https://github.com/brewingshell/dominion/releases):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/brewingshell/dominion/master/get.sh | sh
+```
+
+It downloads the static `linux/amd64` server binary, verifies its SHA-256 against
+`SHA256SUMS`, installs `dominion` and `run.sh` into `~/.local/bin`, seeds
+`~/.config/dominion/.env`, and enables the systemd user service. Requires
+`tmux`.
+
+| Variable               | Effect                                             |
+|------------------------|----------------------------------------------------|
+| `DOMINION_VERSION=v0.1` | Install a specific release instead of the latest. |
+| `DOMINION_INSTALL_DIR`  | Where to put the binary and `run.sh`.             |
+| `DOMINION_NO_SERVICE=1` | Install the files without touching systemd.       |
+
+Prefer to build it yourself? See [Quick start](#quick-start). The release also
+carries the [client apps](#client-apps) (Android APK, Linux AppImage).
+
 ## Security first
 
 dominion is a door to your shells. Read this before exposing it to anything.
@@ -232,6 +254,7 @@ Layout:
 ```
 main.go                    flags, embedded web assets, TLS listener
 env.go                     .env loading and PIN resolution
+get.sh                     one-line installer for release builds
 internal/tmux/             session listing, exact targeting, name validation
 internal/auth/             PIN check, session tokens, rate limiting
 internal/ptybridge/        PTY <-> WebSocket bridge with resize, keepalive,
@@ -244,6 +267,7 @@ assets/                    logo source + override drop-in
 test/                      jsdom harness for web/app.js (dev-only)
 apps/                      Android APK + Linux AppImage shells
 client_app/                built client binaries (gitignored)
+release.sh                 build + publish a release (server binary + clients)
 ```
 
 ## API

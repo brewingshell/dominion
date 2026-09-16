@@ -117,7 +117,16 @@ plate). Regenerate the square icons from the source marks with
 ## Publish
 
 ```sh
-./release.sh 0.1     # builds dominion_0.1.*, uploads both to GitHub release v0.1
+./release.sh 0.1     # client-only: builds dominion_0.1.*, uploads both to release v0.1
+```
+
+For a full release, run the root script instead — it publishes the server binary,
+`SHA256SUMS`, and these clients together:
+
+```sh
+cd ..
+./release.sh 0.1              # server + clients
+./release.sh 0.1 --server-only  # server binary only
 ```
 
 ## Notes / limitations
