@@ -17,9 +17,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"dominion/internal/auth"
-	"dominion/internal/ptybridge"
-	"dominion/internal/tmux"
+	"github.com/brewingshell/dominion/internal/auth"
+	"github.com/brewingshell/dominion/internal/ptybridge"
+	"github.com/brewingshell/dominion/internal/tmux"
 )
 
 // Config configures the portal server.

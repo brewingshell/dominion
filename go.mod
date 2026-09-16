@@ -1,4 +1,4 @@
-module dominion
+module github.com/brewingshell/dominion
 
 go 1.24.4
 

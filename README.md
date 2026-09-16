@@ -48,7 +48,7 @@ If that trade-off is acceptable for your network, the rest is pleasant to use.
 ## Quick start
 
 ```sh
-git clone <this-repo> dominion
+git clone https://github.com/BrewingShell/dominion
 cd dominion
 go build -trimpath -ldflags "-s -w" -o dominion .
 ./dominion
@@ -154,6 +154,15 @@ address and load the same server-served UI. See [`apps/README.md`](apps/README.m
 They exist so the self-signed certificate can be accepted or pinned without a
 browser warning; they do not reimplement the terminal.
 
+Build them into [`client_app/`](client_app/README.md) (gitignored outputs):
+
+```sh
+cd apps
+./build-client.sh            # AppImage + APK
+./build-client.sh desktop    # just the AppImage
+./build-client.sh android    # just the APK
+```
+
 ## Development
 
 ```sh
@@ -183,6 +192,7 @@ web/                       index.html, app.js, style.css, vendor/ (xterm.js)
 assets/                    logo source + override drop-in
 test/                      jsdom harness for web/app.js (dev-only)
 apps/                      Android APK + Linux AppImage shells
+client_app/                built client binaries (gitignored)
 ```
 
 ## API

@@ -16,7 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"dominion/internal/ptybridge"
+	"github.com/brewingshell/dominion/internal/ptybridge"
 )
 
 func newTestServer(t *testing.T) *httptest.Server {

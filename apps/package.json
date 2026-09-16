@@ -23,6 +23,9 @@
     "appId": "net.dominion.client",
     "productName": "dominion",
     "files": ["www/**/*", "electron/**/*", "package.json"],
+    "directories": {
+      "output": "../client_app"
+    },
     "linux": {
       "target": ["AppImage"],
       "category": "TerminalEmulator"

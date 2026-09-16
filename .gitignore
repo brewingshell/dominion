@@ -10,10 +10,25 @@ env
 # Node dev tooling (JS tests only)
 node_modules/
 
-# Client app build artifacts
-apps/dist/
+# Client app build projects (generated)
 apps/android/
 apps/android-overlay/res-raw/
 
+# Built client binaries (keep the READMEs, ignore the outputs)
+/client_app/*
+!/client_app/README.md
+*.apk
+*.AppImage
+*.AppImage.zsync
+apps/dist/
+apps/android/app/build/
+apps/android/.gradle/
+apps/android/local.properties
+apps/*/builder-debug.yml
+linux-unpacked/
+
 # Branding override (kept local)
 assets/override_logo.*
+
+# Third-party / personal icon material (not redistributable)
+apps/icons/terran*

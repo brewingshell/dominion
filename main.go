@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"dominion/internal/server"
-	"dominion/internal/tlsconf"
+	"github.com/brewingshell/dominion/internal/server"
+	"github.com/brewingshell/dominion/internal/tlsconf"
 )
 
 //go:embed all:web

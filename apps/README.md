@@ -57,19 +57,41 @@ verification with no app changes.
 
 ## Build
 
+Artifacts are collected in [`../client_app/`](../client_app/README.md) (gitignored):
+
+```sh
+./build-client.sh            # AppImage + APK
+./build-client.sh desktop    # AppImage only
+./build-client.sh android    # APK only
+```
+
+### Icon variants
+
+`build-variant.sh` builds one icon variant of both targets, with an explicit
+output name:
+
+```sh
+./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+# -> ../client_app/dominion_0.1.AppImage and ../client_app/dominion_0.1.apk
+```
+
+Arguments: output base name, a 1024×1024 square app icon, and a 1024×1024
+transparent Android adaptive-foreground. `icons/original.png` is the project
+mark. Set `BG_COLOR` to change the adaptive-icon background (default `#0b0e14`).
+
 ### Desktop (AppImage)
 
 ```sh
 cd apps
 npm install
 npm run electron          # run in place
-npm run electron:dist     # build AppImage into dist/
+npm run electron:dist     # build AppImage into ../client_app
 ```
 
 ### Android (debug APK)
 
-Requires the Android SDK (`sdkmanager`, platform + build-tools). Capacitor
-generates the native project, then the overlay is copied in:
+Requires an Android SDK and a JDK with `jlink` (`android` target above does the
+copy; or build manually).
 
 ```sh
 cd apps
@@ -83,7 +105,8 @@ cp android-overlay/MainActivity.java android/app/src/main/java/net/dominion/clie
 npm run android           # cd android && ./gradlew assembleDebug
 ```
 
-The debug APK lands in `android/app/build/outputs/apk/debug/`.
+The debug APK lands in `android/app/build/outputs/apk/debug/`; `build-client.sh`
+copies it to `client_app/dominion-debug.apk`.
 
 ## Notes / limitations
 
