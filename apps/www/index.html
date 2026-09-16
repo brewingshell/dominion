@@ -23,6 +23,8 @@
   button { width:100%; margin-top:14px; padding:11px 14px; font-size:14px; font-weight:600;
     color:#0b0e14; background:var(--accent); border:none; border-radius:8px; cursor:pointer; }
   button:disabled { opacity:.6; cursor:default; }
+  #force { color:var(--text); background:transparent; border:1px solid var(--border); }
+  #force:hover { border-color:var(--accent); }
   .err { margin:12px 0 0; color:var(--err); font-size:13px; }
   .row { display:flex; gap:10px; align-items:center; margin-top:14px; font-size:12px; color:var(--muted); }
   .row input { width:auto; }
@@ -41,6 +43,7 @@
       <label for="insecure" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px">Connect over plain HTTP instead of HTTPS</label>
     </div>
     <button id="go" type="submit">Connect</button>
+    <button id="force" type="button" hidden>Connect anyway</button>
     <p id="error" class="err" hidden></p>
   </form>
 </main>

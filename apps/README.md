@@ -35,24 +35,30 @@ files live in the repo, under `android-overlay/`.
 `www/index.html` asks for `host[:port]` on first run (default port `5550`),
 probes `https://host/healthz`, and stores the value. On a later launch it
 reconnects automatically; if the host is unreachable the prompt returns for
-editing. A checkbox allows plain HTTP instead of HTTPS. Nothing about your
-network is hardcoded — replace `YOUR-HOST` only if you want a default
-placeholder.
+editing. A checkbox allows plain HTTP instead of HTTPS, and a **Connect anyway**
+button bypasses a failed probe (the probe can be a false negative on some
+origins). Nothing about your network is hardcoded.
 
 ## Certificate handling
 
 There is no fingerprint entry by design. Two options, best first:
 
 1. **Bundle the CA (recommended).** Run `android-overlay/sync-ca.sh`, then
-   reference `@raw/dominion_ca` from `network_security_config.xml`. The WebView
-   then *verifies* the certificate chain. Electron can do the equivalent with a
-   `session.setCertificateVerifyProc` handler that trusts the bundled CA.
-2. **Accept the certificate.** Electron's `certificate-error` handler and the
-   Android `SslErrorHandler.proceed()` in `android-overlay/MainActivity.java`
-   accept the certificate without validation. This gives encryption but **not**
-   MITM protection.
+   install `network_security_config.xml` (its `base-config` trusts
+   `@raw/dominion_ca` for every host, since the address is entered at runtime).
+   The WebView then *verifies* the certificate chain. Electron accepts it via the
+   `certificate-error` handler in `electron/main.js`.
+2. **Accept the certificate.** If you would rather not bundle the CA, Electron's
+   `certificate-error` handler can call `callback(true)` unconditionally, and on
+   Android you would add an `onReceivedSslError` override. This gives encryption
+   but **not** MITM protection.
 
-Installing the CA into the device trust store upgrades option 2 to full
+Do **not** replace Capacitor's `WebViewClient` on Android: it serves the app
+bundle from `https://localhost` via `shouldInterceptRequest`, and wrapping it
+breaks the app with `ERR_CONNECTION_REFUSED`. `android-overlay/MainActivity.java`
+is therefore intentionally an empty `BridgeActivity`.
+
+Installing the CA into the device trust store also upgrades option 2 to full
 verification with no app changes.
 
 ## Build
@@ -110,8 +116,7 @@ copies it to `client_app/dominion-debug.apk`.
 
 ## Notes / limitations
 
-- `android-overlay/MainActivity.java` and `network_security_config.xml` are
-  templates: set `ALLOWED_HOST` / `<domain>` to your server address, and verify
-  the `MainActivity` override against your Capacitor version (it must forward the
-  other `WebViewClient` callbacks — or omit it entirely when bundling the CA).
+- `android-overlay/network_security_config.xml` trusts the bundled CA for all
+  hosts, so no address needs editing. `android-overlay/MainActivity.java` is a
+  deliberate no-op — see the certificate section.
 - iOS is not built here (needs macOS + signing).
