@@ -1,130 +1,111 @@
 # dominion client apps
 
 Thin native shells around the dominion web portal. They do **not** reimplement
-the terminal: each app prompts for the portal address on first run, then loads
-the server-served UI in a WebView (Electron / Android). All portal behaviour —
-xterm, the mobile key toolbar, lock/logout, session create/kill — comes from the
-server unchanged.
+the terminal: each app prompts for the portal address once, remembers it, and
+loads the server-served UI. All portal behaviour — xterm, the mobile key
+toolbar, lock/logout, session create/kill — comes from the server unchanged.
 
-## Why the apps exist
+| Target | Stack | Size |
+|--------|-------|------|
+| Android | Capacitor + system WebView | ~3.7 MB APK |
+| Linux desktop | Go + system WebView (WebKitGTK) | ~3.2 MB AppImage |
 
-The portal is served over HTTPS with a **local, self-signed CA** (see the root
-README). A native shell can:
-
-- accept that certificate programmatically (no browser warning), and
-- optionally verify it by bundling the CA.
-
-A browser cannot do either without installing the CA into the OS trust store.
+Neither bundles a browser engine. The Android app uses the platform WebView and
+the desktop app links the system WebKitGTK, so both stay a few megabytes. (This
+is why the desktop shell is Go rather than Electron: Electron bundles all of
+Chromium, ~170 MB.)
 
 ## Layout
 
 ```
 apps/
-  package.json            Capacitor + Electron toolchain
+  package.json          Capacitor toolchain (Android only)
   capacitor.config.ts
-  www/                    bootstrap: address prompt -> navigate to the portal
-  electron/               Electron main process (AppImage)
-  android-overlay/        custom Android files to copy into the Capacitor project
+  www/                  shared address prompt + bootstrap
+  android-overlay/      custom Android files copied into the generated project
+  desktop/              Go + webview_go desktop client (its own Go module)
+  icons/                square app icons + regenerate.sh
+  build-variant.sh      one icon variant -> APK + AppImage
+  build-desktop.sh      desktop AppImage only
+  build-client.sh       convenience wrapper (default icon)
+  release.sh            publish the original-mark build to a GitHub release
 ```
 
-`apps/android/` is **generated** by Capacitor and is gitignored. Only the custom
-files live in the repo, under `android-overlay/`.
+`apps/android/` is **generated** by Capacitor and is gitignored; only
+`android-overlay/` is tracked, and `build-variant.sh` copies it in.
 
-## Address prompt
+## Address prompt and memory
 
-`www/index.html` asks for `host[:port]` on first run (default port `5550`),
-probes `https://host/healthz`, and stores the value. On a later launch it
-reconnects automatically; if the host is unreachable the prompt returns for
-editing. A checkbox allows plain HTTP instead of HTTPS, and a **Connect anyway**
-button bypasses a failed probe (the probe can be a false negative on some
-origins). Nothing about your network is hardcoded.
+`www/index.html` + `bootstrap.js` ask for `host[:port]` (default port `5550`).
+The value is stored once and reused on every launch. A checkbox selects plain
+HTTP instead of HTTPS. Behaviour differs by shell:
+
+- **Android** navigates top-level to the address. (A subresource `fetch` probe
+  is blocked there: the app's origin is `https://localhost`, so an `http://`
+  probe is mixed content and an `https://` one is gated by certificate rules.)
+- **Desktop** probes with Go's `net/http` (no browser restrictions), then
+  navigates; on failure it shows the prompt with an error.
+- **Browser** uses a `no-cors` `fetch` probe and offers **Connect anyway**.
+
+**Change server**: the login screen has a *Change server* button, shown only in
+a shell. Desktop calls a Go binding (`dominionChangeURL`); Android reloads its
+own prompt (`https://localhost/?change=1`), detected via the `dominion-shell`
+user-agent marker.
 
 ## Certificate handling
 
-There is no fingerprint entry by design. Two options, best first:
+- **Android** trusts the bundled CA (`android-overlay/sync-ca.sh` copies the
+  server's `ca.pem` to `res/raw/`); `network_security_config.xml` applies it in
+  `base-config` for every host, since the address is entered at runtime. Run
+  `sync-ca.sh` after the server regenerates its CA.
+- **Desktop** links the system WebKitGTK, which has no certificate-bypass hook,
+  so the app defaults to **plain HTTP**. HTTPS works if the CA is installed in
+  the OS trust store.
 
-1. **Bundle the CA (recommended).** Run `android-overlay/sync-ca.sh`, then
-   install `network_security_config.xml` (its `base-config` trusts
-   `@raw/dominion_ca` for every host, since the address is entered at runtime).
-   The WebView then *verifies* the certificate chain. Electron accepts it via the
-   `certificate-error` handler in `electron/main.js`.
-2. **Accept the certificate.** If you would rather not bundle the CA, Electron's
-   `certificate-error` handler can call `callback(true)` unconditionally, and on
-   Android you would add an `onReceivedSslError` override. This gives encryption
-   but **not** MITM protection.
-
-Do **not** replace Capacitor's `WebViewClient` on Android: it serves the app
-bundle from `https://localhost` via `shouldInterceptRequest`, and wrapping it
-breaks the app with `ERR_CONNECTION_REFUSED`. `android-overlay/MainActivity.java`
-is therefore intentionally an empty `BridgeActivity`.
-
-Installing the CA into the device trust store also upgrades option 2 to full
-verification with no app changes.
+Do **not** replace Capacitor's `WebViewClient`: it serves the app bundle from
+`https://localhost` via `shouldInterceptRequest`. `MainActivity` *subclasses*
+`BridgeWebViewClient` (keeping that hook) to (a) keep `http`/`https` navigation
+in-app instead of handing it to the system browser and (b) return to the prompt
+on a failed main-frame load.
 
 ## Build
 
-Artifacts are collected in [`../client_app/`](../client_app/README.md) (gitignored):
+Artifacts are collected in [`../client_app/`](../client_app/README.md).
+
+Prerequisites:
 
 ```sh
-./build-client.sh            # AppImage + APK
-./build-client.sh desktop    # AppImage only
-./build-client.sh android    # APK only
+# Android
+export ANDROID_HOME="$HOME/Android"
+export JAVA_HOME="$HOME/jdk/jdk-17.0.12+7"   # needs jlink
+# Desktop
+sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev
 ```
 
-### Icon variants
-
-`build-variant.sh` builds one icon variant of both targets, with an explicit
-output name:
-
 ```sh
+./build-client.sh                                      # default icon, both targets
 ./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
-# -> ../client_app/dominion_0.1.AppImage and ../client_app/dominion_0.1.apk
+./build-desktop.sh icons/original.png dominion_0.1      # AppImage only
 ```
 
-Arguments: output base name, a 1024×1024 square app icon, and a 1024×1024
-transparent Android adaptive-foreground. `icons/original.png` is the project
-mark. Launcher icons are drawn with alpha and the adaptive background is
-transparent by default; set `BG_COLOR=#rrggbb` for a solid plate. Regenerate the
-square icons from the source marks with `./icons/regenerate.sh`.
+`build-variant.sh` takes an output base, a 1024×1024 icon, and a 1024×1024
+transparent adaptive-foreground. Launcher icons are drawn with alpha and the
+adaptive background is transparent by default (`BG_COLOR=#rrggbb` for a solid
+plate). Regenerate the square icons from the source marks with
+`./icons/regenerate.sh`.
 
-### Publish
+> Desktop note: `webview_go` asks pkg-config for `webkit2gtk-4.0`, which
+> Debian 13 dropped. `build-desktop.sh` generates a shim `.pc` from the installed
+> 4.1 one (the library is `dlopen`ed as 4.1 at runtime).
+
+## Publish
 
 ```sh
-./release.sh 0.1     # builds dominion_0.1.* and uploads to GitHub release v0.1
+./release.sh 0.1     # builds dominion_0.1.*, uploads both to GitHub release v0.1
 ```
-
-### Desktop (AppImage)
-
-```sh
-cd apps
-npm install
-npm run electron          # run in place
-npm run electron:dist     # build AppImage into ../client_app
-```
-
-### Android (debug APK)
-
-Requires an Android SDK and a JDK with `jlink` (`android` target above does the
-copy; or build manually).
-
-```sh
-cd apps
-npm install
-npx cap add android
-mkdir -p android/app/src/main/res/xml android/app/src/main/res/raw
-cp android-overlay/network_security_config.xml android/app/src/main/res/xml/
-cp android-overlay/MainActivity.java android/app/src/main/java/net/dominion/client/
-./android-overlay/sync-ca.sh && cp android-overlay/res-raw/dominion_ca.pem android/app/src/main/res/raw/
-# add android:networkSecurityConfig="@xml/network_security_config" to <application> in AndroidManifest.xml
-npm run android           # cd android && ./gradlew assembleDebug
-```
-
-The debug APK lands in `android/app/build/outputs/apk/debug/`; `build-client.sh`
-copies it to `client_app/dominion-debug.apk`.
 
 ## Notes / limitations
 
-- `android-overlay/network_security_config.xml` trusts the bundled CA for all
-  hosts, so no address needs editing. `android-overlay/MainActivity.java` is a
-  deliberate no-op — see the certificate section.
+- The desktop AppImage depends on the system WebKitGTK at runtime (present on
+  any desktop Linux, not on servers).
 - iOS is not built here (needs macOS + signing).

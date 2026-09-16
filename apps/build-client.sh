@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Build the desktop (AppImage) and Android (debug APK) clients into ../client_app.
+# Build the desktop (AppImage) and Android (debug APK) clients into ../client_app
+# with the default (original-mark) icon.
 #
 # Usage: ./build-client.sh [desktop|android|all]
 #
 # Android needs an SDK and a JDK with jlink (17 works; some 21 builds omit it):
 #   export ANDROID_HOME="$HOME/Android"
 #   export JAVA_HOME="$HOME/jdk/jdk-17.0.12+7"
+# The desktop AppImage needs GTK3 + WebKitGTK dev packages:
+#   sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev
 set -euo pipefail
 
 target="${1:-all}"
@@ -14,29 +17,21 @@ out="$here/../client_app"
 cd "$here"
 
 mkdir -p "$out"
-[ -d node_modules ] || npm install
-
-build_desktop() {
-  echo "==> Building AppImage"
-  npm run electron:dist
-  echo "    -> $out/dominion-*.AppImage"
-}
-
-build_android() {
-  echo "==> Building Android debug APK"
-  npx cap sync android
-  ( cd android && ./gradlew assembleDebug )
-  local apk="android/app/build/outputs/apk/debug/app-debug.apk"
-  local dest="$out/dominion-debug.apk"
-  cp "$apk" "$dest"
-  echo "    -> $dest"
-}
 
 case "$target" in
-  desktop) build_desktop ;;
-  android) build_android ;;
-  all) build_desktop; build_android ;;
-  *) echo "usage: $0 [desktop|android|all]" >&2; exit 2 ;;
+  desktop)
+    ./build-desktop.sh icons/original.png dominion_0.1
+    ;;
+  android)
+    SKIP_DESKTOP=1 ./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+    ;;
+  all)
+    ./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+    ;;
+  *)
+    echo "usage: $0 [desktop|android|all]" >&2
+    exit 2
+    ;;
 esac
 
 echo

@@ -5,31 +5,14 @@
   "description": "Native shells (Android + Linux desktop) for the dominion portal.",
   "scripts": {
     "sync": "cap sync",
-    "android": "cap sync android && cd android && ./gradlew assembleDebug",
-    "electron": "electron .",
-    "electron:dist": "electron-builder --linux AppImage"
+    "android": "cap sync android && cd android && ./gradlew assembleDebug"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.0.0",
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.0"
+    "@capacitor/cli": "^6.0.0"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/preferences": "^6.0.0"
-  },
-  "build": {
-    "appId": "net.dominion.client",
-    "productName": "dominion",
-    "files": ["www/**/*", "electron/**/*", "package.json"],
-    "directories": {
-      "output": "../client_app"
-    },
-    "linux": {
-      "target": ["AppImage"],
-      "category": "TerminalEmulator"
-    }
-  },
-  "main": "electron/main.js"
+  }
 }

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  dominion mark: an original "keep" (fortress) sigil.
+  dominion mark: an original dark-red castle (keep with two towers), 3:4.
 
-  A crenellated shield with a roman D formed by the gate opening and a terminal
-  caret inside it. Released with the project under the MIT license; not derived
+  Crenellated towers flanking a central keep, with an arched gate holding a
+  terminal caret. Released with the project under the MIT license; not derived
   from any third-party artwork.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 400" width="256" height="400"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400"
      role="img" aria-label="dominion">
   <defs>
-    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="keep" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#8b2020"/>
       <stop offset="0.55" stop-color="#5a1414"/>
       <stop offset="1" stop-color="#3d0e0e"/>
@@ -20,32 +20,39 @@
     </linearGradient>
   </defs>
 
-  <!-- Keep silhouette: flat, crenellated top tapering to a point. -->
-  <path d="M128 8
-           L232 52
-           L232 150
-           C232 250 190 330 128 392
-           C66 330 24 250 24 150
-           L24 52 Z"
-        fill="url(#shield)" stroke="url(#edge)" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Castle silhouette: left tower, central keep, right tower, flat base. -->
+  <path d="M30 350
+           L30 50
+           L48 50 L48 72
+           L57 72 L57 50
+           L75 50 L75 72
+           L84 72 L84 50
+           L102 50
+           L102 94
+           L117 94 L117 116
+           L129 116 L129 94
+           L144 94 L144 116
+           L156 116 L156 94
+           L171 94 L171 116
+           L183 116 L183 94
+           L198 94
+           L198 50
+           L216 50 L216 72
+           L225 72 L225 50
+           L243 50 L243 72
+           L252 72 L252 50
+           L270 50
+           L270 350 Z"
+        fill="url(#keep)" stroke="url(#edge)" stroke-width="6" stroke-linejoin="round"/>
 
-  <!-- Crenellations along the top edge. -->
-  <path d="M24 52 L64 35 L64 60 L104 43 L104 68 L152 68 L152 43 L192 60 L192 35 L232 52"
-        fill="none" stroke="url(#edge)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-
-  <!-- Gate: the shape reads as a barred roman D. -->
-  <path d="M92 128
-           L92 236
-           L128 236
-           C162 236 180 208 180 182
-           C180 156 162 128 128 128 Z"
-        fill="none" stroke="#f3d6d6" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Arched gate: a dark opening in the keep. -->
+  <path d="M100 350
+           L100 268
+           A50 50 0 0 1 200 268
+           L200 350 Z"
+        fill="#2a0a0a" stroke="#f3d6d6" stroke-width="7" stroke-linejoin="round"/>
 
   <!-- Terminal caret inside the gate. -->
-  <path d="M112 160 L136 182 L112 204" fill="none" stroke="#ffb4b4" stroke-width="10"
+  <path d="M126 276 L174 308 L126 340" fill="none" stroke="#ffb4b4" stroke-width="11"
         stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Base rule. -->
-  <line x1="86" y1="264" x2="170" y2="264" stroke="#f3d6d6" stroke-width="8" stroke-linecap="round"/>
-  <line x1="102" y1="286" x2="154" y2="286" stroke="#ffb4b4" stroke-width="6" stroke-linecap="round"/>
 </svg>

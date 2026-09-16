@@ -7,12 +7,18 @@ env
 # Logs
 *.log
 
-# Node dev tooling (JS tests only)
+# Node dev tooling
 node_modules/
 
 # Client app build projects (generated)
 apps/android/
 apps/android-overlay/res-raw/
+
+# Desktop client build byproducts
+apps/desktop/www/
+apps/desktop/.pkgconfig/
+apps/desktop/dominion-desktop
+apps/.appimagetool
 
 # Built client binaries (keep the READMEs, ignore the outputs)
 /client_app/*
@@ -20,8 +26,8 @@ apps/android-overlay/res-raw/
 *.apk
 *.AppImage
 *.AppImage.zsync
-# Distributable Android build is committed; the AppImage exceeds the 100 MiB
-# git limit and is attached to a GitHub release instead (see apps/release.sh).
+# Distributable Android build is committed; the AppImage is attached to a
+# GitHub release instead (see apps/release.sh).
 !/client_app/dominion_0.1.apk
 apps/dist/
 apps/android/app/build/

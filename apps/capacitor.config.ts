@@ -5,9 +5,11 @@ const config: CapacitorConfig = {
   appName: "dominion",
   webDir: "www",
   android: {
-    // The portal is served over HTTPS with a local CA; the app trusts it via
-    // the network security config, so cleartext is not needed.
-    allowMixedContent: false,
+    // The portal may be reached over plain HTTP (the app's own origin is
+    // https://localhost), which is mixed content; allow it.
+    allowMixedContent: true,
+    // Marks the shell so the server page can show the "Change server" button.
+    appendUserAgent: "dominion-shell/1.0",
   },
   server: {
     androidScheme: "https",

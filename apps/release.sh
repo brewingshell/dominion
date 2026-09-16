@@ -7,9 +7,8 @@
 # the release tagged v<version>. Only the original-mark build is published; the
 # alternate-icon builds stay local.
 #
-# Note: the AppImage is ~104 MiB, above GitHub's 100 MiB limit for files
-# committed to a repository, so it is uploaded as a release asset (2 GiB cap)
-# rather than pushed to git.
+# The APK is also committed to git (client_app/dominion_<version>.apk); the
+# AppImage is attached here as a release asset instead.
 #
 # Auth: needs a token with "Contents: write", in GITHUB_TOKEN, or the gh CLI
 # logged in.
@@ -34,7 +33,8 @@ done
 
 notes="dominion client $tag — Android APK and Linux AppImage.
 
-Both prompt for the portal address on first run. See client_app/README.md."
+Both remember the portal address and can change it from the login screen.
+See client_app/README.md."
 
 if command -v gh >/dev/null 2>&1; then
   gh release create "$tag" "$apk" "$appimage" \

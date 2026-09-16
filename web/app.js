@@ -6,6 +6,7 @@
   const pinEl = document.getElementById("pin");
   const loginError = document.getElementById("login-error");
   const loginSub = document.getElementById("login-sub");
+  const changeServerEl = document.getElementById("change-server");
   const appEl = document.getElementById("app");
   const drawerEl = document.getElementById("drawer");
   const tablistEl = document.getElementById("tablist");
@@ -121,6 +122,28 @@
     }
     pinEl.focus();
   }
+
+  // In a native shell the portal address is changeable from the login screen:
+  // the desktop app exposes a Go binding, the Android app is marked by its
+  // user agent and reloads its own address prompt.
+  function inShell() {
+    return typeof window.dominionChangeURL === "function" ||
+      navigator.userAgent.includes("dominion-shell");
+  }
+
+  // shellChangeTarget is the Android/browser destination for the change-server
+  // action, or null when the desktop binding handles it.
+  function shellChangeTarget() {
+    return "https://localhost/?change=1";
+  }
+
+  changeServerEl.addEventListener("click", () => {
+    if (typeof window.dominionChangeURL === "function") {
+      window.dominionChangeURL();
+      return;
+    }
+    window.location.href = shellChangeTarget();
+  });
 
   function showApp() {
     state.locked = false;
@@ -832,6 +855,7 @@
   }
 
   setKeysVisible(keysAllowed(), false);
+  changeServerEl.hidden = !inShell();
 
   (async function init() {
     if (await checkAuth()) startPolling();

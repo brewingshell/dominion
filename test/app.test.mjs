@@ -311,3 +311,28 @@ test("close code 4001 stops polling and returns to login", async () => {
   assert.equal(document.getElementById("login").hidden, false, "login overlay should show");
   assert.equal(api.state.loggedIn, false);
 });
+
+test("change-server button is hidden in a plain browser", () => {
+  const { document } = load();
+  assert.equal(document.getElementById("change-server").hidden, true);
+});
+
+test("change-server button shows in the Android shell and targets the prompt", () => {
+  const { api, document } = load([], {
+    url: "https://localhost/",
+    userAgent: "Mozilla/5.0 dominion-shell/1.0",
+  });
+  const el = document.getElementById("change-server");
+  assert.equal(el.hidden, false);
+  assert.equal(api.inShell(), true);
+  assert.equal(api.shellChangeTarget(), "https://localhost/?change=1");
+});
+
+test("change-server button calls the desktop binding", () => {
+  let called = 0;
+  const { document } = load([], { beforeEval: (w) => { w.dominionChangeURL = () => { called += 1; }; } });
+  const el = document.getElementById("change-server");
+  assert.equal(el.hidden, false);
+  el.click();
+  assert.equal(called, 1);
+});

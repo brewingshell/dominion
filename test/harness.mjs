@@ -79,6 +79,12 @@ export function load(routes = [], options = {}) {
     pretendToBeVisual: true,
   });
   const window = dom.window;
+  if (options.userAgent) {
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      get: () => options.userAgent,
+    });
+  }
 
   stubTerminal(window);
   window.matchMedia = () => ({
@@ -115,12 +121,15 @@ export function load(routes = [], options = {}) {
   }
 
   const src = readFileSync(join(root, "web", "app.js"), "utf8");
+  // Tests may inject shell globals (e.g. window.dominionChangeURL) before the
+  // app is evaluated.
+  if (typeof options.beforeEval === "function") options.beforeEval(window);
   const marker = "})();";
   const idx = src.lastIndexOf(marker);
   const hook =
     "globalThis.__dominion={ctrlChar,applyModifiers,activeMods,state,applySessions," +
     "renderSessions,activate,refreshActiveChrome,updateGlobalStatus,stopPolling," +
-    "startPolling,poll,api};\n";
+    "startPolling,poll,api,inShell,shellChangeTarget};\n";
   window.eval(src.slice(0, idx) + hook + src.slice(idx));
 
   const api = window.__dominion;

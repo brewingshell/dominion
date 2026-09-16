@@ -167,12 +167,20 @@ the embedded default. Point elsewhere with `-branding /path/to/dir`.
 
 ## Client apps
 
-Thin native shells (Android APK, Linux AppImage) that prompt for the portal
-address and load the same server-served UI. See [`apps/README.md`](apps/README.md).
-They exist so the self-signed certificate can be accepted or pinned without a
-browser warning; they do not reimplement the terminal.
+Thin native shells that remember the portal address and load the same
+server-served UI. Neither bundles a browser engine:
 
-Build them into [`client_app/`](client_app/README.md) (gitignored outputs):
+| Target | Stack | Size |
+|--------|-------|------|
+| Android APK | Capacitor + system WebView | ~3.7 MB |
+| Linux AppImage | Go + system WebView (WebKitGTK) | ~3.2 MB |
+
+The Android app trusts the bundled local CA (encrypted by default); the desktop
+app uses plain HTTP, since WebKitGTK cannot bypass a self-signed certificate.
+Both can change the server from the login screen. See
+[`apps/README.md`](apps/README.md).
+
+Build them into [`client_app/`](client_app/README.md):
 
 ```sh
 cd apps

@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Build one icon variant of the desktop + Android clients into ../client_app.
+# Build one icon variant of the Android + Linux desktop clients into ../client_app.
 #
 # Usage: ./build-variant.sh <output-base> <icon.png> <foreground.png>
 #
-#   output-base   e.g. "dominion_0.1" -> ../client_app/dominion_0.1.AppImage + .apk
-#   icon.png      1024x1024 square app icon
+#   output-base    e.g. "dominion_0.1" -> ../client_app/dominion_0.1.{apk,AppImage}
+#   icon.png       1024x1024 square app icon
 #   foreground.png 1024x1024 transparent foreground (Android adaptive icon safe
 #                  zone); pass the same file as icon.png if unsure.
 #
 # Android needs an SDK and a JDK with jlink (17 works; some 21 builds omit it):
 #   export ANDROID_HOME="$HOME/Android"
 #   export JAVA_HOME="$HOME/jdk/jdk-17.0.12+7"
+# The desktop AppImage needs GTK3 + WebKitGTK dev packages:
+#   sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev
 set -euo pipefail
 
 base="${1:?usage: build-variant.sh <output-base> <icon.png> <foreground.png>}"
@@ -27,17 +29,6 @@ cd "$here"
 [ -d node_modules ] || npm install
 [ -d android ] || { echo "apps/android missing; run: npx cap add android" >&2; exit 1; }
 mkdir -p "$out"
-
-echo "==> $base: AppImage"
-# electron-builder writes <productName>-<version>.AppImage; clear any previous
-# one first so a stale file is never mistaken for this build's output.
-rm -f "$out"/dominion-*.AppImage
-rm -f "$out/$base.AppImage"
-npx electron-builder --linux AppImage --config.linux.icon="$icon" >/dev/null
-if [ -f "$out"/dominion-*.AppImage ]; then
-  mv "$out"/dominion-*.AppImage "$out/$base.AppImage"
-fi
-chmod +x "$out/$base.AppImage"
 
 echo "==> $base: Android launcher icons"
 # Transparent by default: the mark is drawn with alpha and no plate behind it.
@@ -58,11 +49,32 @@ for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
   convert "$fg" -resize "${fg_size}x${fg_size}" PNG32:"$android_res/mipmap-$dens/ic_launcher_foreground.png"
 done
 
+echo "==> $base: Android project overlay"
+# Keep the generated project in sync with the tracked overlay: the WebView
+# client patch, the network security config, and the bundled CA.
+mkdir -p android/app/src/main/res/xml android/app/src/main/res/raw \
+         android/app/src/main/java/net/dominion/client
+cp android-overlay/MainActivity.java android/app/src/main/java/net/dominion/client/MainActivity.java
+cp android-overlay/network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
+./android-overlay/sync-ca.sh >/dev/null
+cp android-overlay/res-raw/dominion_ca.pem android/app/src/main/res/raw/dominion_ca.pem
+
 echo "==> $base: Android APK"
 npx cap sync android >/dev/null
 ( cd android && ./gradlew assembleDebug -q )
 rm -f "$out/$base.apk"
 cp android/app/build/outputs/apk/debug/app-debug.apk "$out/$base.apk"
 
+echo "==> $base: desktop AppImage"
+if [ "${SKIP_DESKTOP:-0}" = "1" ]; then
+  echo "    (skipped)"
+else
+  ./build-desktop.sh "$icon" "$base"
+fi
+
 echo
-ls -lh "$out/$base.AppImage" "$out/$base.apk"
+if [ "${SKIP_DESKTOP:-0}" = "1" ]; then
+  ls -lh "$out/$base.apk"
+else
+  ls -lh "$out/$base.AppImage" "$out/$base.apk"
+fi

@@ -119,6 +119,23 @@ code {
   filter: brightness(1.08);
 }
 
+#login-form button.link {
+  margin-top: 8px;
+  padding: 6px;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+}
+
+#login-form button.link:hover {
+  color: var(--text);
+  filter: none;
+}
+
+#login-form button.link[hidden] {
+  display: none;
+}
+
 .error {
   margin: 14px 0 0;
   color: var(--err);

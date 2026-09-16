@@ -5,6 +5,18 @@
   const SCHEME_KEY = "dominion.scheme";
   const PROBE_MS = 6000;
 
+  const params = new URLSearchParams(window.location.search);
+  // Which native shell are we in? Desktop injects a Go binding; Android is
+  // marked with an appended user agent. A plain browser is neither.
+  const SHELL = window.dominionConnect
+    ? "desktop"
+    : navigator.userAgent.includes("dominion-shell")
+      ? "android"
+      : "browser";
+  const FORCE_PROMPT = params.get("change") === "1";
+  // The desktop shell has no URL params; it inlines the error instead.
+  const LOAD_ERROR = params.get("error") || window.__dominionLoadError || "";
+
   const formEl = document.getElementById("connect");
   const hostEl = document.getElementById("host");
   const schemeEl = document.getElementById("insecure");
@@ -12,10 +24,12 @@
   const goEl = document.getElementById("go");
   const forceEl = document.getElementById("force");
 
-  // Preferences is available inside the native shell; localStorage is the
-  // fallback when the page is opened in a plain browser.
+  // Persistence: the desktop shell owns it in Go and inlines the saved values;
+  // Android uses Capacitor Preferences; a browser falls back to localStorage.
   const store = {
     async get(key) {
+      const inline = window.__dominionSaved && window.__dominionSaved[key];
+      if (inline) return inline;
       try {
         if (window.Capacitor?.Plugins?.Preferences) {
           const { value } = await window.Capacitor.Plugins.Preferences.get({ key });
@@ -50,10 +64,9 @@
     return s;
   }
 
-  // probe checks reachability only. The portal is a different origin from the
-  // app bundle (https://localhost), so a plain CORS fetch would be blocked:
-  // use mode "no-cors", where a resolved (opaque) response means the request
-  // completed and a rejection means it did not.
+  // probe is used by the plain browser only, to show an inline error before
+  // navigating. Subresource fetches are blocked in the native shells (mixed
+  // content and certificate rules), so they navigate directly instead.
   async function probe(base) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), PROBE_MS);
@@ -76,11 +89,9 @@
     errEl.hidden = false;
   }
 
-  // pending holds the last address, so "Connect anyway" can bypass a failed
-  // probe (the probe can be a false negative on some origins/certs).
   let pending = null;
 
-  function go(base, host, scheme) {
+  function persistAndGo(base, host, scheme) {
     store.set(HOST_KEY, host);
     store.set(SCHEME_KEY, scheme);
     window.location.replace(`${base}/`);
@@ -93,12 +104,28 @@
     errEl.hidden = true;
     forceEl.hidden = true;
     try {
+      if (SHELL === "desktop") {
+        // Go probes, persists, and navigates; on failure it rejects and we
+        // show the message inline.
+        try {
+          await window.dominionConnect(host, scheme);
+        } catch (e) {
+          showError(String((e && e.message) || e));
+          return false;
+        }
+        return true;
+      }
+      if (SHELL === "android") {
+        // No subresource probe: persist and navigate top-level.
+        persistAndGo(base, host, scheme);
+        return true;
+      }
       if (!(await probe(base))) {
         showError(`Could not reach ${base}. Check the address and that the server is running.`);
         forceEl.hidden = false;
         return false;
       }
-      go(base, host, scheme);
+      persistAndGo(base, host, scheme);
       return true;
     } finally {
       goEl.disabled = false;
@@ -109,26 +136,37 @@
     e.preventDefault();
     const host = normalize(hostEl.value);
     if (!host) {
-      showError("Enter an address like YOUR-HOST:5550");
+      showError("Enter an address like HOST:5550");
       return;
     }
     connect(host, schemeEl.checked ? "http" : "https");
   });
 
   forceEl.addEventListener("click", () => {
-    if (pending) go(pending.base, pending.host, pending.scheme);
+    if (pending) persistAndGo(pending.base, pending.host, pending.scheme);
   });
 
   (async function init() {
-    const [savedHost, savedScheme] = await Promise.all([
-      store.get(HOST_KEY),
-      store.get(SCHEME_KEY),
-    ]);
+    const savedHost = await store.get(HOST_KEY);
+    const savedScheme = await store.get(SCHEME_KEY);
+    const scheme = savedScheme || (SHELL === "desktop" ? "http" : "https");
+
     if (savedHost) {
       hostEl.value = savedHost;
-      const scheme = savedScheme || "https";
       schemeEl.checked = scheme === "http";
-      // Reconnect automatically; on failure the form stays for editing.
+    }
+    if (LOAD_ERROR) {
+      showError(
+        LOAD_ERROR === "unreachable"
+          ? `Could not reach ${scheme}://${savedHost || "the server"}. Check the address and that the server is running.`
+          : LOAD_ERROR
+      );
+    }
+
+    // The desktop shell decides when to connect (Go probes on launch), so its
+    // prompt only ever appears when input is needed.
+    const autoConnect = SHELL !== "desktop" && !FORCE_PROMPT && !LOAD_ERROR && savedHost;
+    if (autoConnect) {
       await connect(savedHost, scheme);
     } else {
       hostEl.focus();

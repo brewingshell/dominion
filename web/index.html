@@ -84,11 +84,12 @@
 
   <div id="login" class="overlay">
     <form id="login-form" autocomplete="off">
-      <img class="logo" src="/dom-logo.png" alt="" width="141" height="220">
+      <img class="logo" src="/dom-logo.png" alt="" width="165" height="220">
       <h1>dominion</h1>
       <p class="muted" id="login-sub">Enter PIN to continue</p>
       <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" autofocus aria-label="PIN">
       <button type="submit">Unlock</button>
+      <button id="change-server" type="button" class="link" hidden>Change server</button>
       <p id="login-error" class="error" hidden></p>
     </form>
   </div>
