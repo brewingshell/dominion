@@ -180,7 +180,18 @@ func KillSession(bin, name string) error {
 	out, err := run(bin, "kill-session", "-t", target(name))
 	if err != nil {
 		msg := strings.ToLower(out)
-		for _, needle := range []string{"can't find session", "no such session", "session not found"} {
+		// Killing the last session stops the tmux server, so a subsequent kill
+		// reports a missing server rather than a missing session. Both mean the
+		// session does not exist.
+		for _, needle := range []string{
+			"can't find session",
+			"no such session",
+			"session not found",
+			"no server running",
+			"failed to connect",
+			"error connecting",
+			"no such file or directory",
+		} {
 			if strings.Contains(msg, needle) {
 				return ErrNotFound
 			}
