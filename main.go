@@ -45,6 +45,7 @@ func main() {
 	var (
 		addr        = flag.String("addr", ":5550", "address to listen on")
 		pin         = flag.String("pin", defaultPIN, "PIN required to access the portal (DOMINION_PIN env or .env)")
+		pinFile     = flag.String("pin-file", "", "file a PIN change is written to (default ~/.config/dominion/pin)")
 		bin         = flag.String("tmux", "tmux", "path to the tmux binary")
 		ttl         = flag.Duration("ttl", 12*time.Hour, "how long a login lasts")
 		useTLS      = flag.Bool("tls", true, "serve HTTPS with a local CA-signed certificate")
@@ -64,6 +65,15 @@ func main() {
 	if *showVersion {
 		fmt.Printf("dominion %s\n", version)
 		return
+	}
+
+	// The pin file outranks -pin and DOMINION_PIN so a PIN changed from the
+	// settings dialog survives a restart. Warn when a value on disk shadows an
+	// operator-supplied one.
+	pinPath := effectivePINFile(home, *pinFile)
+	resolvedPIN := resolvePIN(home, *pin, *pinFile)
+	if readPINFile(pinPath) != "" && (*pin != defaultPIN || os.Getenv("DOMINION_PIN") != "") {
+		log.Printf("PIN is managed by %s; -pin and DOMINION_PIN are ignored", pinPath)
 	}
 
 	certFile, keyFile := *tlsCert, *tlsKey
@@ -101,7 +111,8 @@ func main() {
 	}
 
 	srv := server.New(server.Config{
-		PIN:           *pin,
+		PIN:           resolvedPIN,
+		PINFile:       pinPath,
 		TmuxBin:       *bin,
 		TokenTTL:      *ttl,
 		WebFS:         webFS,

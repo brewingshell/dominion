@@ -35,6 +35,12 @@
   const settingsForm = document.getElementById("settings-form");
   const settingsServersEl = document.getElementById("settings-servers");
   const manageServersEl = document.getElementById("manage-servers");
+  const pinCurrentEl = document.getElementById("pin-current");
+  const pinNewEl = document.getElementById("pin-new");
+  const pinConfirmEl = document.getElementById("pin-confirm");
+  const pinErrorEl = document.getElementById("pin-error");
+  const pinOkEl = document.getElementById("pin-ok");
+  const changePinEl = document.getElementById("change-pin");
   const mobileQuery = window.matchMedia("(max-width: 768px)");
 
   const POLL_MS = 3000;
@@ -226,11 +232,64 @@
   });
 
   settingsEl.addEventListener("click", () => {
+    pinCurrentEl.value = "";
+    pinNewEl.value = "";
+    pinConfirmEl.value = "";
+    pinErrorEl.hidden = true;
+    pinOkEl.hidden = true;
     settingsDialog.showModal();
   });
 
   for (const btn of settingsForm.querySelectorAll(".seg-btn")) {
     btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
+  }
+
+  // setPinError shows msg in the change-PIN section, or clears it when msg is
+  // empty. A message always hides the success note.
+  function setPinError(msg) {
+    pinErrorEl.textContent = msg || "";
+    pinErrorEl.hidden = !msg;
+    pinOkEl.hidden = true;
+  }
+
+  // changePIN asks the server to replace this host's PIN. The server requires
+  // the current PIN and signs out every other session; the client that made the
+  // change stays logged in.
+  async function changePIN() {
+    const current = pinCurrentEl.value.trim();
+    const next = pinNewEl.value.trim();
+    const confirm = pinConfirmEl.value.trim();
+    if (!current) return setPinError("Enter your current PIN.");
+    if (next.length < 4 || next.length > 12) {
+      return setPinError("New PIN must be 4 to 12 characters.");
+    }
+    if (next !== confirm) return setPinError("The new PINs do not match.");
+
+    setPinError("");
+    changePinEl.disabled = true;
+    try {
+      const res = await apiJSON("/api/pin", { current, new: next });
+      if (!res.ok) {
+        return setPinError(await errorText(res, "Could not update the PIN."));
+      }
+      pinCurrentEl.value = "";
+      pinNewEl.value = "";
+      pinConfirmEl.value = "";
+      pinOkEl.hidden = false;
+      pinCurrentEl.focus();
+    } finally {
+      changePinEl.disabled = false;
+    }
+  }
+
+  changePinEl.addEventListener("click", changePIN);
+  for (const field of [pinCurrentEl, pinNewEl, pinConfirmEl]) {
+    field.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        changePIN();
+      }
+    });
   }
 
   manageServersEl.addEventListener("click", () => {

@@ -18,6 +18,30 @@ func TestCheckPIN(t *testing.T) {
 	}
 }
 
+func TestSetPIN(t *testing.T) {
+	s := NewStore("3232", time.Hour, false)
+	s.SetPIN("5683")
+	if s.CheckPIN("3232") {
+		t.Error("old PIN still accepted after SetPIN")
+	}
+	if !s.CheckPIN("5683") {
+		t.Error("new PIN rejected after SetPIN")
+	}
+}
+
+func TestRevokeAllExcept(t *testing.T) {
+	s := NewStore("3232", time.Hour, false)
+	keep, _ := s.NewToken()
+	other, _ := s.NewToken()
+	s.RevokeAllExcept(keep)
+	if !s.Valid(keep) {
+		t.Error("the kept token should stay valid")
+	}
+	if s.Valid(other) {
+		t.Error("other tokens should be revoked")
+	}
+}
+
 func TestTokenLifecycle(t *testing.T) {
 	s := NewStore("3232", time.Hour, false)
 	tok, err := s.NewToken()

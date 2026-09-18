@@ -434,3 +434,68 @@ test("startup theme from localStorage is reflected on the buttons", () => {
     "true"
   );
 });
+
+test("change PIN rejects mismatched and short new PINs without a request", async () => {
+  const { api, document, calls, tick } = load();
+  document.getElementById("settings").click();
+  document.getElementById("pin-current").value = "3232";
+  document.getElementById("pin-new").value = "5683";
+  document.getElementById("pin-confirm").value = "9999";
+
+  await api.changePIN();
+  assert.equal(document.getElementById("pin-error").hidden, false);
+  assert.match(document.getElementById("pin-error").textContent, /do not match/);
+  assert.equal(calls.some((c) => c.path === "/api/pin"), false);
+
+  document.getElementById("pin-new").value = "12";
+  document.getElementById("pin-confirm").value = "12";
+  await api.changePIN();
+  assert.match(document.getElementById("pin-error").textContent, /4 to 12/);
+  assert.equal(calls.some((c) => c.path === "/api/pin"), false);
+  await tick();
+  api.stopPolling();
+});
+
+test("change PIN posts current and new and clears fields on success", async () => {
+  const { api, document, calls } = load([
+    {
+      match: (p) => p === "/api/pin",
+      respond: () => jsonResponse(200, { ok: true }),
+    },
+  ]);
+  document.getElementById("settings").click();
+  document.getElementById("pin-current").value = "3232";
+  document.getElementById("pin-new").value = "5683";
+  document.getElementById("pin-confirm").value = "5683";
+
+  await api.changePIN();
+  const call = calls.find((c) => c.path === "/api/pin");
+  assert.ok(call, "a /api/pin request should be made");
+  assert.deepEqual(JSON.parse(call.opts.body), { current: "3232", new: "5683" });
+
+  assert.equal(document.getElementById("pin-current").value, "");
+  assert.equal(document.getElementById("pin-new").value, "");
+  assert.equal(document.getElementById("pin-confirm").value, "");
+  assert.equal(document.getElementById("pin-error").hidden, true);
+  assert.equal(document.getElementById("pin-ok").hidden, false);
+  api.stopPolling();
+});
+
+test("change PIN surfaces the server error for a wrong current PIN", async () => {
+  const { api, document } = load([
+    {
+      match: (p) => p === "/api/pin",
+      respond: () => jsonResponse(401, { error: "current PIN is incorrect" }),
+    },
+  ]);
+  document.getElementById("pin-current").value = "0000";
+  document.getElementById("pin-new").value = "5683";
+  document.getElementById("pin-confirm").value = "5683";
+
+  await api.changePIN();
+  assert.equal(document.getElementById("pin-error").hidden, false);
+  assert.match(document.getElementById("pin-error").textContent, /current PIN is incorrect/);
+  assert.equal(document.getElementById("pin-ok").hidden, true);
+  api.stopPolling();
+});
+

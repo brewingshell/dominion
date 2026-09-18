@@ -6,21 +6,25 @@ import (
 	"strings"
 )
 
-// defaultPINValue is the portal PIN used when no flag, environment variable, or
-// .env file supplies one.
+// defaultPINValue is the portal PIN used when no flag, environment variable,
+// .env file, or pin file supplies one.
 const defaultPINValue = "1111"
 
 // envFileName is the dotenv file the portal reads its configuration from.
 const envFileName = ".env"
 
-// pinFromEnv resolves the portal PIN with this precedence:
+// pinFileName is the file the portal writes when the PIN is changed from the
+// settings dialog. It outranks both the -pin flag and DOMINION_PIN so a change
+// made in the UI is not silently reverted on restart.
+const pinFileName = "pin"
+
+// pinFromEnv resolves the portal PIN from the environment, ignoring the pin
+// file and the -pin flag, with this precedence:
 //
 //  1. the DOMINION_PIN environment variable
 //  2. DOMINION_PIN in a .env file, searched as $DOMINION_ENV, then ./.env, then
 //     ~/.config/dominion/.env
 //  3. defaultPINValue
-//
-// An explicit -pin flag overrides all of it; flag defaults are seeded from here.
 func pinFromEnv(home string) string {
 	if v := os.Getenv("DOMINION_PIN"); v != "" {
 		return v
@@ -35,6 +39,57 @@ func pinFromEnv(home string) string {
 		}
 	}
 	return defaultPINValue
+}
+
+// resolvePIN layers the pin file and the explicit -pin flag over the
+// environment:
+//
+//  1. the pin file (pinFile, or <home>/.config/dominion/pin), when present and
+//     non-empty — a change made in the settings dialog outranks the operator's
+//     flag and environment
+//  2. flagValue, when the -pin flag was set
+//  3. pinFromEnv (DOMINION_PIN env, then .env, then the default)
+func resolvePIN(home, flagValue, pinFile string) string {
+	pinFile = effectivePINFile(home, pinFile)
+	if v := readPINFile(pinFile); v != "" {
+		return v
+	}
+	if flagValue != "" {
+		return flagValue
+	}
+	return pinFromEnv(home)
+}
+
+// effectivePINFile returns pinFile when set, otherwise the default location
+// under home. An empty result (no home, no explicit file) disables the pin
+// file.
+func effectivePINFile(home, pinFile string) string {
+	if pinFile != "" {
+		return pinFile
+	}
+	return defaultPINFile(home)
+}
+
+// defaultPINFile is where the settings dialog persists a changed PIN.
+func defaultPINFile(home string) string {
+	if home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".config", "dominion", pinFileName)
+}
+
+// readPINFile returns the trimmed contents of path, or "" when the file is
+// missing, empty, or unreadable. A missing file is the normal case, not an
+// error.
+func readPINFile(path string) string {
+	if path == "" {
+		return ""
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // envFileCandidates lists the .env locations to try, most specific first.

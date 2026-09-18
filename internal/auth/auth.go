@@ -43,7 +43,18 @@ func NewStore(pin string, ttl time.Duration, secure bool) *Store {
 
 // CheckPIN compares the supplied PIN against the configured one in constant time.
 func (s *Store) CheckPIN(pin string) bool {
-	return subtle.ConstantTimeCompare([]byte(pin), []byte(s.pin)) == 1
+	s.mu.Lock()
+	want := s.pin
+	s.mu.Unlock()
+	return subtle.ConstantTimeCompare([]byte(pin), []byte(want)) == 1
+}
+
+// SetPIN replaces the configured PIN. Callers are responsible for verifying the
+// current PIN and persisting the new one before calling this.
+func (s *Store) SetPIN(pin string) {
+	s.mu.Lock()
+	s.pin = pin
+	s.mu.Unlock()
 }
 
 // NewToken mints a random session token and records its expiry.
@@ -128,6 +139,19 @@ func (s *Store) Revoke(tok string) {
 	s.mu.Lock()
 	delete(s.items, tok)
 	s.mu.Unlock()
+}
+
+// RevokeAllExcept invalidates every live token except keep. It is used after a
+// PIN change so that clients authenticated with the old PIN are signed out,
+// while the client that made the change stays logged in.
+func (s *Store) RevokeAllExcept(keep string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for tok := range s.items {
+		if tok != keep {
+			delete(s.items, tok)
+		}
+	}
 }
 
 // SetCookie writes the auth cookie for a token. requestSecure is true when the

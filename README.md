@@ -56,8 +56,10 @@ section in [`CHANGELOG.md`](CHANGELOG.md).
 
 dominion is a door to your shells. Read this before exposing it to anything.
 
-- **Default PIN is `1111`.** Change it. It is a shared secret entered once per
-  client; there is no per-user account model.
+- **Default PIN is `1111`.** Change it — from the portal's Settings dialog
+  (then other clients are signed out), or via `DOMINION_PIN`/`.env` before first
+  start. It is a shared secret entered once per client; there is no per-user
+  account model.
 - **LAN only.** Do not put it on the public internet. If you must reach it from
   outside, use a VPN (e.g. Tailscale/WireGuard) rather than a port forward.
 - **HTTPS with a self-signed local CA.** Traffic is encrypted, but unless you
@@ -133,7 +135,9 @@ loginctl enable-linger "$USER"
 The server runs **inside a tmux session named `dominion`**, so its own log is the
 first tab in the portal. `install.sh` seeds `~/.config/dominion/.env` from
 `.env.example`, and the server reads the PIN from there (the tmux server may
-predate the unit and not inherit its environment). It loops the server, so a
+predate the unit and not inherit its environment). A PIN changed from the
+Settings dialog is written to `~/.config/dominion/pin`, which takes precedence on
+the next start. It loops the server, so a
 Ctrl-C from the portal tab restarts it instead of ending the session. Because
 tmux detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`),
 and `KillMode=process` plus `ExecStop` ensure stopping the unit tears down only
@@ -187,6 +191,7 @@ HTTPS sessions stay protected.
 |----------------|------------------------|----------------------------------------------------|
 | `-addr`        | `:5550`                | Listen address. Bind one interface with `192.168.x.x:5550`. |
 | `-pin`         | `$DOMINION_PIN`, `.env`, or `1111` | PIN required to access the portal.    |
+| `-pin-file`    | `~/.config/dominion/pin` | File a PIN change is written to; outranks `-pin` and `DOMINION_PIN`. |
 | `-tmux`        | `tmux`                 | Path to the tmux binary.                           |
 | `-ttl`         | `12h`                  | How long a login lasts.                            |
 | `-tls`         | `true`                 | Serve TLS with a local CA-signed certificate.      |
@@ -201,7 +206,10 @@ HTTPS sessions stay protected.
 
 Prefer `DOMINION_PIN` (env or `.env`) over `-pin`: a flag is visible in `ps` to
 other local users, an environment variable is not. Precedence is
-`-pin` → `DOMINION_PIN` env → `.env` file → built-in `1111`.
+`~/.config/dominion/pin` → `-pin` → `DOMINION_PIN` env → `.env` file → built-in
+`1111`. A PIN changed from the portal's Settings dialog is written to the pin
+file, so it survives a restart and takes priority over `-pin`/`DOMINION_PIN`
+(delete the file to fall back to them).
 
 ## The dominion session
 
@@ -330,6 +338,7 @@ auth cookie.
 | `POST` | `/api/login`             | `{"pin":"..."}` → sets the auth cookie.  |
 | `POST` | `/api/lock`              | Require the PIN again; keeps terminals.  |
 | `POST` | `/api/logout`            | Revoke the token; closes terminals.      |
+| `POST` | `/api/pin`               | `{"current":"...","new":"..."}` change this host's PIN. |
 | `GET`  | `/api/sessions`          | List tmux sessions.                      |
 | `POST` | `/api/sessions/create`   | `{"name":"..."}` create a session.       |
 | `POST` | `/api/sessions/kill`     | `{"name":"..."}` kill a session.         |

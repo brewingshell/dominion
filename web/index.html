@@ -110,6 +110,18 @@
         <p class="dialog-label">Servers</p>
         <button type="button" class="btn-ghost wide" id="manage-servers">Manage servers&hellip;</button>
       </div>
+      <div id="settings-pin">
+        <p class="dialog-label">Change PIN</p>
+        <label for="pin-current">Current PIN</label>
+        <input id="pin-current" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
+        <label for="pin-new" class="spaced">New PIN</label>
+        <input id="pin-new" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
+        <label for="pin-confirm" class="spaced">Confirm new PIN</label>
+        <input id="pin-confirm" type="password" inputmode="numeric" autocomplete="off" maxlength="12">
+        <p id="pin-error" class="error" hidden></p>
+        <p id="pin-ok" class="muted" hidden>PIN updated.</p>
+        <button type="button" class="btn-primary wide" id="change-pin">Update PIN</button>
+      </div>
       <div class="dialog-actions">
         <button type="button" class="btn-primary" data-close>Done</button>
       </div>

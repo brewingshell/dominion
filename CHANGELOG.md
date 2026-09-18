@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.4]
+
+### Added
+
+- Change the portal PIN from the Settings dialog. The server requires the
+  current PIN, persists the new one to `~/.config/dominion/pin` (0600) so it
+  survives a restart, and signs out every other session. The pin file outranks
+  `-pin`/`DOMINION_PIN`; delete it to fall back. New `-pin-file` flag and
+  `POST /api/pin` endpoint.
+
 ## [0.0.3]
 
 ### Fixed
@@ -40,6 +50,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Vendored xterm.js carries local Android soft-keyboard/IME input fixes, and a
   test guards the bundle against drift.
 
-[Unreleased]: https://github.com/brewingshell/dominion/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/brewingshell/dominion/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/brewingshell/dominion/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/brewingshell/dominion/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/brewingshell/dominion/releases/tag/v0.0.2

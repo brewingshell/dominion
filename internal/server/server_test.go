@@ -688,3 +688,189 @@ func TestPortalAttachNotCountedAsExternal(t *testing.T) {
 		}
 	}
 }
+
+// newTestServerWithPINFile builds a test server that can persist a PIN change
+// to path.
+func newTestServerWithPINFile(t *testing.T, path string) *httptest.Server {
+	t.Helper()
+	srv := New(Config{
+		PIN:      "3232",
+		PINFile:  path,
+		TmuxBin:  "tmux",
+		TokenTTL: time.Hour,
+		WebFS:    os.DirFS("../.."),
+		Logger:   log.New(io.Discard, "", 0),
+	})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+// loginWithPIN logs in and returns the auth cookie, failing on a non-200.
+func loginWithPIN(t *testing.T, ts *httptest.Server, pin string) *http.Cookie {
+	t.Helper()
+	res, err := http.Post(ts.URL+"/api/login", "application/json",
+		strings.NewReader(`{"pin":"`+pin+`"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("login with %q: want 200, got %d", pin, res.StatusCode)
+	}
+	for _, c := range res.Cookies() {
+		if c.Name == "dominion_auth" {
+			return c
+		}
+	}
+	t.Fatal("no auth cookie returned")
+	return nil
+}
+
+func authedStatus(t *testing.T, ts *httptest.Server, cookie *http.Cookie) int {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/sessions", nil)
+	req.AddCookie(cookie)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	return res.StatusCode
+}
+
+func TestChangePINRequiresAuth(t *testing.T) {
+	ts := newTestServerWithPINFile(t, filepath.Join(t.TempDir(), "pin"))
+	res := postJSON(t, ts, "/api/pin", nil, `{"current":"3232","new":"5683"}`)
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("want 401, got %d", res.StatusCode)
+	}
+}
+
+func TestChangePINDisabledWithoutFile(t *testing.T) {
+	ts := newTestServer(t) // no PINFile
+	cookie := loginCookie(t, ts)
+	res := postJSON(t, ts, "/api/pin", cookie, `{"current":"3232","new":"5683"}`)
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("want 403, got %d", res.StatusCode)
+	}
+}
+
+func TestChangePINRequiresCurrent(t *testing.T) {
+	pinPath := filepath.Join(t.TempDir(), "pin")
+	ts := newTestServerWithPINFile(t, pinPath)
+	cookie := loginCookie(t, ts)
+
+	res := postJSON(t, ts, "/api/pin", cookie, `{"current":"0000","new":"5683"}`)
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("wrong current PIN: want 401, got %d", res.StatusCode)
+	}
+	if _, err := os.Stat(pinPath); !os.IsNotExist(err) {
+		t.Fatal("a failed change must not write the pin file")
+	}
+	// The original PIN still works.
+	if c := loginWithPIN(t, ts, "3232"); c == nil {
+		t.Fatal("original PIN should still log in")
+	}
+}
+
+func TestChangePINValidation(t *testing.T) {
+	ts := newTestServerWithPINFile(t, filepath.Join(t.TempDir(), "pin"))
+	cookie := loginCookie(t, ts)
+	for _, body := range []string{
+		`{"current":"3232","new":"123"}`,
+		`{"current":"3232","new":"1234567890123"}`,
+	} {
+		res := postJSON(t, ts, "/api/pin", cookie, body)
+		res.Body.Close()
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("%s: want 400, got %d", body, res.StatusCode)
+		}
+	}
+}
+
+func TestChangePINSuccess(t *testing.T) {
+	pinPath := filepath.Join(t.TempDir(), "pin")
+	ts := newTestServerWithPINFile(t, pinPath)
+
+	caller := loginCookie(t, ts)         // the client making the change
+	other := loginWithPIN(t, ts, "3232") // a second client, same PIN
+
+	res := postJSON(t, ts, "/api/pin", caller, `{"current":"3232","new":"5683"}`)
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("change: want 200, got %d", res.StatusCode)
+	}
+
+	// The caller stays logged in; the other session is revoked.
+	if got := authedStatus(t, ts, caller); got != http.StatusOK {
+		t.Fatalf("caller should stay authenticated, got %d", got)
+	}
+	if got := authedStatus(t, ts, other); got != http.StatusUnauthorized {
+		t.Fatalf("other session should be revoked, got %d", got)
+	}
+
+	// Old PIN rejected, new PIN accepted.
+	res, err := http.Post(ts.URL+"/api/login", "application/json", strings.NewReader(`{"pin":"3232"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("old PIN: want 401, got %d", res.StatusCode)
+	}
+	loginWithPIN(t, ts, "5683")
+
+	// The new PIN is on disk with owner-only permissions.
+	data, err := os.ReadFile(pinPath)
+	if err != nil {
+		t.Fatalf("read pin file: %v", err)
+	}
+	if strings.TrimSpace(string(data)) != "5683" {
+		t.Fatalf("pin file = %q, want 5683", strings.TrimSpace(string(data)))
+	}
+	info, err := os.Stat(pinPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("pin file mode = %o, want 600", perm)
+	}
+}
+
+func TestChangePINWriteFailureLeavesPIN(t *testing.T) {
+	// Point PINFile inside a regular file so MkdirAll fails.
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ts := newTestServerWithPINFile(t, filepath.Join(blocker, "pin"))
+	cookie := loginCookie(t, ts)
+
+	res := postJSON(t, ts, "/api/pin", cookie, `{"current":"3232","new":"5683"}`)
+	res.Body.Close()
+	if res.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("write failure: want 500, got %d", res.StatusCode)
+	}
+	// The in-memory PIN is unchanged.
+	if c := loginWithPIN(t, ts, "3232"); c == nil {
+		t.Fatal("PIN should be unchanged after a write failure")
+	}
+}
+
+func TestWritePINFileRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "pin")
+	if err := writePINFile(path, "2468"); err != nil {
+		t.Fatalf("writePINFile: %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(got)) != "2468" {
+		t.Fatalf("content = %q, want 2468", strings.TrimSpace(string(got)))
+	}
+}

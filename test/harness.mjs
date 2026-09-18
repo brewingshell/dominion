@@ -131,7 +131,7 @@ export function load(routes = [], options = {}) {
     "renderSessions,activate,refreshActiveChrome,updateGlobalStatus,stopPolling," +
     "startPolling,poll,api,inShell,shellChangeTarget,shellSettingsTarget," +
     "applyTheme,currentTheme," +
-    "canManageServers,shellVersion," +
+    "canManageServers,shellVersion,changePIN,setPinError," +
     "TERM_THEMES};\n";
   window.eval(src.slice(0, idx) + hook + src.slice(idx));
 

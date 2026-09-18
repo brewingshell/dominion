@@ -24,8 +24,11 @@ import (
 
 // Config configures the portal server.
 type Config struct {
-	PIN      string
-	TmuxBin  string
+	PIN     string
+	TmuxBin string
+	// PINFile is where a PIN changed from the settings dialog is persisted. An
+	// empty value disables changing the PIN.
+	PINFile  string
 	TokenTTL time.Duration
 	WebFS    fs.FS
 	Logger   *log.Logger
@@ -35,6 +38,13 @@ type Config struct {
 	// assets under web/ are the defaults; see brandSlots.
 	BrandingDir string
 }
+
+// PIN length bounds, enforced for a PIN change. They match the login field's
+// maxlength and keep the shared secret non-trivial.
+const (
+	minPINLen = 4
+	maxPINLen = 12
+)
 
 // brandSlot is a servable brand image with the override file names it accepts.
 type brandSlot struct {
@@ -209,6 +219,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/login", s.handleLogin)
 	mux.HandleFunc("/api/lock", s.handleLock)
 	mux.HandleFunc("/api/logout", s.handleLogout)
+	mux.HandleFunc("/api/pin", s.requireAuth(s.handleChangePIN))
 	mux.HandleFunc("/api/sessions", s.requireAuth(s.handleSessions))
 	mux.HandleFunc("/api/sessions/create", s.requireAuth(s.handleCreateSession))
 	mux.HandleFunc("/api/sessions/kill", s.requireAuth(s.handleKillSession))
@@ -383,6 +394,90 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	s.auth.ClearCookie(w, r.TLS != nil)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handleChangePIN changes the portal PIN for this host. The caller must supply
+// the current PIN; the new one is persisted before it is applied in memory, so
+// a write failure leaves the running PIN untouched. Every other session is
+// revoked (a client authenticated with the old PIN is signed out), while the
+// caller stays logged in.
+func (s *Server) handleChangePIN(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+	if s.cfg.PINFile == "" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "changing the PIN is disabled"})
+		return
+	}
+	key := clientKey(r)
+	if !s.limiter.Allowed(key) {
+		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many attempts, try again later"})
+		return
+	}
+
+	var body struct {
+		Current string `json:"current"`
+		New     string `json:"new"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+		return
+	}
+	if n := len([]rune(body.New)); n < minPINLen || n > maxPINLen {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "new PIN must be 4 to 12 characters",
+		})
+		return
+	}
+	if !s.auth.CheckPIN(body.Current) {
+		s.limiter.Fail(key)
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "current PIN is incorrect"})
+		return
+	}
+	if err := writePINFile(s.cfg.PINFile, body.New); err != nil {
+		s.cfg.Logger.Printf("write pin file %s: %v", s.cfg.PINFile, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save PIN"})
+		return
+	}
+
+	s.auth.SetPIN(body.New)
+	caller := ""
+	if c, err := r.Cookie(auth.CookieName); err == nil {
+		caller = c.Value
+	}
+	s.auth.RevokeAllExcept(caller)
+	s.limiter.Reset(key)
+	s.cfg.Logger.Printf("PIN changed; other sessions revoked")
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// writePINFile atomically writes pin to path with 0600 permissions. The temp
+// file sits in the same directory so the final rename cannot cross a
+// filesystem boundary.
+func writePINFile(path, pin string) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".pin-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.WriteString(pin + "\n"); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {

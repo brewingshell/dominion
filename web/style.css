@@ -328,6 +328,26 @@ code {
   font-size: 13px;
 }
 
+#settings-pin {
+  margin-top: 20px;
+}
+
+#settings-pin .spaced {
+  margin-top: 12px;
+}
+
+#settings-pin #pin-ok {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.btn-primary.wide {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
 /* App shell */
 #app {
   height: 100%;
