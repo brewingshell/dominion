@@ -23,6 +23,10 @@ import (
 //go:embed all:web
 var webFS embed.FS
 
+// version is the release version. It is overridden at build time with
+// -ldflags "-X main.version=…"; a source build reports "dev".
+var version = "dev"
+
 // sanList collects a repeatable -tls-san flag.
 type sanList []string
 
@@ -52,9 +56,15 @@ func main() {
 		brandingDir = flag.String("branding", "assets", "directory of logo overrides (override_logo.*, logo.*)")
 		allowHTTP   = flag.Bool("allow-http", true, "also accept plain HTTP on the same port (less secure)")
 		secureCook  = flag.Bool("secure-cookies", false, "force the Secure cookie attribute (set behind a TLS-terminating proxy)")
+		showVersion = flag.Bool("version", false, "print the version and exit")
 	)
 	flag.Var(&sans, "tls-san", "extra DNS name or IP for the certificate (repeatable)")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("dominion %s\n", version)
+		return
+	}
 
 	certFile, keyFile := *tlsCert, *tlsKey
 	caFile := *tlsCA

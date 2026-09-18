@@ -39,7 +39,14 @@ It downloads the static `linux/amd64` server binary, verifies its SHA-256 agains
 | `DOMINION_NO_SERVICE=1` | Install the files without touching systemd.       |
 
 Prefer to build it yourself? See [Quick start](#quick-start). The release also
-carries the [client apps](#client-apps) (Android APK, Linux AppImage).
+carries the [client apps](#client-apps) (Android APK, Linux AppImage) and the
+[terminal client](#terminal-client).
+
+Releases are cut from a version tag: `.github/workflows/release.yml` runs the
+same `release.sh` used locally, building the static server and terminal client,
+the Android APK, the Linux AppImage, and the bundled `ca.pem`, then publishing
+them with `SHA256SUMS` as one GitHub release. See
+[`CHANGELOG.md`](CHANGELOG.md) for what changed in each version.
 
 ## Security first
 
@@ -218,12 +225,36 @@ server-served UI. Neither bundles a browser engine:
 |--------|-------|------|
 | Android APK | Capacitor + system WebView | ~3.7 MB |
 | Linux AppImage | Go + system WebView (WebKitGTK) | ~3.2 MB |
+| Terminal (TUI) | Go + tview | ~7 MB |
 
 The Android app trusts the bundled local CA (encrypted by default); the desktop
 app uses plain HTTP, since WebKitGTK cannot bypass a self-signed certificate.
-Both remember the server, keep a named list of saved servers, and offer a
-settings button (dark/light theme, and server management in a shell). See
-[`apps/README.md`](apps/README.md).
+The Android and desktop apps remember the server, keep a named list of saved
+servers, and offer a settings button (dark/light theme, and server management in
+a shell). See [`apps/README.md`](apps/README.md).
+
+### Terminal client
+
+`dominion-client-tui` is a remote client for a running portal, a terminal
+lookalike of the AppImage. It prompts for the server address and PIN, lists
+sessions, creates and kills them, and attaches to a session over the same
+WebSocket PTY bridge the browser uses. Selecting a session suspends the TUI and
+pipes your terminal to it; **Ctrl-]** detaches without killing the tmux session.
+It shares the saved-server address book in `~/.config/dominion/client.json` and
+never persists the PIN.
+
+```sh
+go build ./cmd/dominion-client-tui
+./dominion-client-tui                       # interactive connect screen
+./dominion-client-tui -server box:5550      # skip straight to login
+./dominion-client-tui -server box:5550 -scheme https -insecure
+```
+
+Install it from a release with `DOMINION_TUI=1`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/brewingshell/dominion/master/get.sh | DOMINION_TUI=1 sh
+```
 
 Build them into [`client_app/`](client_app/README.md):
 
@@ -255,10 +286,12 @@ Layout:
 main.go                    flags, embedded web assets, TLS listener
 env.go                     .env loading and PIN resolution
 get.sh                     one-line installer for release builds
+cmd/dominion-client-tui/   terminal client entry point
 internal/tmux/             session listing, exact targeting, name validation
 internal/auth/             PIN check, session tokens, rate limiting
 internal/ptybridge/        PTY <-> WebSocket bridge with resize, keepalive,
                            and periodic token revalidation
+internal/tuiclient/        terminal client: API, config, attach bridge, tview UI
 internal/tlsconf/          local CA + leaf certificate generation
 internal/server/           HTTP routes, auth middleware, static files, branding
 web/                       index.html, app.js, style.css, vendor/ (xterm.js)
@@ -268,6 +301,8 @@ test/                      jsdom harness for web/app.js (dev-only)
 apps/                      Android APK + Linux AppImage shells
 client_app/                built client binaries (gitignored)
 release.sh                 build + publish a release (server binary + clients)
+CHANGELOG.md               release notes by version
+.github/workflows/         CI tests and the tag-driven release pipeline
 ```
 
 ## API

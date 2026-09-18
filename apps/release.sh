@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 # Publish the distributable (original-mark) client builds as a GitHub release.
 #
-#   ./release.sh 0.1
+#   ./release.sh 0.0.2
 #
 # Builds the dominion_<version> variant and attaches its APK and AppImage to
 # the release tagged v<version>. Only the original-mark build is published; the
 # alternate-icon builds stay local.
 #
-# The APK is also committed to git (client_app/dominion_<version>.apk); the
-# AppImage is attached here as a release asset instead.
-#
 # Auth: needs a token with "Contents: write", in GITHUB_TOKEN, or the gh CLI
 # logged in.
 set -euo pipefail
 
-version="${1:?usage: ./release.sh <version>   e.g. ./release.sh 0.1}"
+version="${1:?usage: ./release.sh <version>   e.g. ./release.sh 0.0.2}"
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="brewingshell/dominion"
 tag="v$version"
@@ -23,7 +20,7 @@ base="dominion_$version"
 cd "$here"
 
 echo "==> building $base"
-./build-variant.sh "$base" icons/original.png icons/original-foreground.png
+DOMINION_VERSION="$version" ./build-variant.sh "$base" icons/original.png icons/original-foreground.png
 
 apk="../client_app/$base.apk"
 appimage="../client_app/$base.AppImage"

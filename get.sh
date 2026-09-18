@@ -11,6 +11,7 @@
 #   DOMINION_VERSION=v0.1      install a specific release (default: latest)
 #   DOMINION_INSTALL_DIR=DIR   where to put the binary and run.sh (~/.local/bin)
 #   DOMINION_CONFIG_DIR=DIR    where the .env lives (~/.config/dominion)
+#   DOMINION_TUI=1             also install the terminal client (dominion-client-tui)
 #   DOMINION_NO_SERVICE=1      do not touch systemd; just install the files
 #
 # Linux/tmux only. For the from-source path and other options, see the README.
@@ -75,6 +76,17 @@ install -m 0755 "$tmp/$asset" "$install_dir/dominion"
 install -m 0755 "$tmp/run.sh" "$install_dir/run.sh"
 say "==> installed $install_dir/dominion"
 
+if [ "${DOMINION_TUI:-0}" = "1" ]; then
+  tui_asset="dominion-client-tui_${ver}_linux_amd64"
+  say "==> downloading $tui_asset ($tag)"
+  curl -fsSL -o "$tmp/$tui_asset" "$base/$tui_asset" || die "download failed: $base/$tui_asset"
+  if ! ( cd "$tmp" && grep "  $tui_asset\$" SHA256SUMS > "$tmp/$tui_asset.sums" && sha256sum -c "$tmp/$tui_asset.sums" ); then
+    die "checksum verification failed for $tui_asset"
+  fi
+  install -m 0755 "$tmp/$tui_asset" "$install_dir/dominion-client-tui"
+  say "==> installed $install_dir/dominion-client-tui"
+fi
+
 conf_dir="${DOMINION_CONFIG_DIR:-$HOME/.config/dominion}"
 mkdir -p "$conf_dir"
 if [ -f "$conf_dir/.env" ]; then
@@ -114,4 +126,7 @@ esac
 say ""
 say "dominion is installed. Open https://<this-host>:5550 and enter the PIN"
 say "(1111 by default; change it in $conf_dir/.env)."
+if [ "${DOMINION_TUI:-0}" = "1" ]; then
+  say "Run the terminal client with: dominion-client-tui --server <host>"
+fi
 say "Keep it running without an interactive login: loginctl enable-linger \"\$USER\""

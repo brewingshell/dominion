@@ -3,7 +3,7 @@
 #
 # Usage: ./build-variant.sh <output-base> <icon.png> <foreground.png>
 #
-#   output-base    e.g. "dominion_0.1" -> ../client_app/dominion_0.1.{apk,AppImage}
+#   output-base    e.g. "dominion_0.0.2" -> ../client_app/dominion_0.0.2.{apk,AppImage}
 #   icon.png       1024x1024 square app icon
 #   foreground.png 1024x1024 transparent foreground (Android adaptive icon safe
 #                  zone); pass the same file as icon.png if unsure.
@@ -27,7 +27,9 @@ cd "$here"
 [ -f "$icon" ] || { echo "icon not found: $icon" >&2; exit 1; }
 [ -f "$fg" ] || { echo "foreground not found: $fg" >&2; exit 1; }
 [ -d node_modules ] || npm install
-[ -d android ] || { echo "apps/android missing; run: npx cap add android" >&2; exit 1; }
+# The generated Android project is gitignored, so a fresh clone or CI runner
+# does not have it. Create it on demand instead of failing.
+[ -d android ] || npx cap add android
 mkdir -p "$out"
 
 echo "==> $base: Android launcher icons"
@@ -56,11 +58,33 @@ mkdir -p android/app/src/main/res/xml android/app/src/main/res/raw \
          android/app/src/main/java/net/dominion/client
 cp android-overlay/MainActivity.java android/app/src/main/java/net/dominion/client/MainActivity.java
 cp android-overlay/network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
-./android-overlay/sync-ca.sh >/dev/null
+if [ -n "${DOMINION_CA:-}" ]; then
+  ./android-overlay/sync-ca.sh "$DOMINION_CA" >/dev/null
+else
+  ./android-overlay/sync-ca.sh >/dev/null
+fi
 cp android-overlay/res-raw/dominion_ca.pem android/app/src/main/res/raw/dominion_ca.pem
 
 echo "==> $base: Android APK"
 npx cap sync android >/dev/null
+
+# The release version drives the APK's versionName/versionCode (the generated
+# project defaults to 1.0/1). versionCode is major*10000 + minor*100 + patch.
+if [ -n "${DOMINION_VERSION:-}" ]; then
+  gradle=android/app/build.gradle
+  IFS=. read -r v_maj v_min v_pat <<EOF
+${DOMINION_VERSION}
+EOF
+  v_maj="${v_maj//[^0-9]/}"; v_min="${v_min//[^0-9]/}"; v_pat="${v_pat//[^0-9]/}"
+  v_maj="${v_maj:-0}"; v_min="${v_min:-0}"; v_pat="${v_pat:-0}"
+  v_code=$((10#$v_maj * 10000 + 10#$v_min * 100 + 10#$v_pat))
+  if grep -q 'versionCode ' "$gradle" && grep -q 'versionName ' "$gradle"; then
+    sed -i "s/versionCode [0-9][0-9]*/versionCode $v_code/" "$gradle"
+    sed -i "s/versionName \"[^\"]*\"/versionName \"$DOMINION_VERSION\"/" "$gradle"
+    echo "    versionName $DOMINION_VERSION (versionCode $v_code)"
+  fi
+fi
+
 ( cd android && ./gradlew assembleDebug -q )
 rm -f "$out/$base.apk"
 cp android/app/build/outputs/apk/debug/app-debug.apk "$out/$base.apk"

@@ -5,22 +5,28 @@ Built client binaries land here. Everything except this README is **gitignored**
 
 | File | Icon | Platform | Size |
 |------|------|----------|------|
-| `dominion_0.1.apk` | original mark | Android | ~3.7 MB |
-| `dominion_0.1.AppImage` | original mark | Linux desktop | ~3.2 MB |
+| `dominion_0.0.2.apk` | original mark | Android | ~3.7 MB |
+| `dominion_0.0.2.AppImage` | original mark | Linux desktop | ~3.2 MB |
 | `dominion.apk` | alternate (personal) mark | Android | ~3.9 MB |
 | `dominion.AppImage` | alternate (personal) mark | Linux desktop | ~3.2 MB |
 
-`dominion_0.1.*` uses the project's original mark and is the build to publish;
-`dominion.apk` is also committed to git. The `dominion.*` (no version) builds use
-a personal icon kept **outside** the repository (`apps/icons/terran.png`,
-gitignored) — keep those local.
+`dominion_<version>.*` uses the project's original mark and is the build to
+publish. The `dominion.*` (no version) builds use a personal icon kept
+**outside** the repository (`apps/icons/terran.png`, gitignored) — keep those
+local.
+
+> These are build outputs and do **not** update themselves. When the portal
+> gains or changes a shell feature (for example saved servers, which need
+> client capability `dominion-shell/1.1`), every client must be **rebuilt**;
+> an older build simply hides the new control. Run `./build-client.sh` (or
+> `./build-variant.sh` per icon) after any change under `apps/`.
 
 ## Build
 
-From `apps/`:
+From `apps/` (the version suffix comes from `DOMINION_VERSION`, default `0.0.2`):
 
 ```sh
-./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+DOMINION_VERSION=0.0.2 ./build-variant.sh dominion_0.0.2 icons/original.png icons/original-foreground.png
 ```
 
 Prerequisites: an Android SDK + a JDK with `jlink` (`ANDROID_HOME`,
@@ -31,18 +37,18 @@ Prerequisites: an Android SDK + a JDK with `jlink` (`ANDROID_HOME`,
 ## Publishing
 
 ```sh
-cd apps
-./release.sh 0.1        # builds dominion_0.1.*, uploads both to GitHub release v0.1
+cd ..
+./release.sh 0.0.2      # server + TUI + clients -> GitHub release v0.0.2
 ```
 
 Needs a token with **Contents: write** in `GITHUB_TOKEN`, or the `gh` CLI logged
-in.
+in. CI runs the same script from a tag (see `.github/workflows/release.yml`).
 
 ## Use
 
-- **AppImage**: `chmod +x dominion_0.1.AppImage && ./dominion_0.1.AppImage`
+- **AppImage**: `chmod +x dominion_0.0.2.AppImage && ./dominion_0.0.2.AppImage`
   (needs system WebKitGTK at runtime)
-- **APK**: `adb install dominion_0.1.apk` (or copy to the device and open it;
+- **APK**: `adb install dominion_0.0.2.apk` (or copy to the device and open it;
   allow install from unknown sources).
 
 Both remember the portal `host:port` once entered, and the login screen has a

@@ -57,12 +57,21 @@ to connect immediately, or delete it. Stored on desktop in
 `~/.config/dominion/client.json` and on Android in Capacitor Preferences
 (capped at 20).
 
+The portal gates this entry on the shell's capability version: desktop requires
+the `dominionOpenSettings` binding, and Android advertises `dominion-shell/<major>.<minor>`
+via `appendUserAgent` and must be at least **1.1**. An older client hides the
+entry rather than showing a button its shell cannot service — so a change to the
+shell feature set needs a **client rebuild** (`apps/capacitor.config.ts` is the
+Android version source).
+
 ## Certificate handling
 
 - **Android** trusts the bundled CA (`android-overlay/sync-ca.sh` copies the
   server's `ca.pem` to `res/raw/`); `network_security_config.xml` applies it in
   `base-config` for every host, since the address is entered at runtime. Run
-  `sync-ca.sh` after the server regenerates its CA.
+  `sync-ca.sh` after the server regenerates its CA. Set `DOMINION_CA` to a PEM
+  path to bundle a specific CA (CI supplies the canonical one from a secret); it
+  otherwise defaults to `~/.config/dominion/ca.pem`.
 - **Desktop** links the system WebKitGTK, which has no certificate-bypass hook,
   so the app defaults to **plain HTTP**. HTTPS works if the CA is installed in
   the OS trust store.
@@ -89,9 +98,13 @@ sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev
 
 ```sh
 ./build-client.sh                                      # default icon, both targets
-./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
-./build-desktop.sh icons/original.png dominion_0.1      # AppImage only
+DOMINION_VERSION=0.0.2 ./build-variant.sh dominion_0.0.2 icons/original.png icons/original-foreground.png
+./build-desktop.sh icons/original.png dominion_0.0.2   # AppImage only
 ```
+
+`DOMINION_VERSION` sets the release version: it drives the APK's
+`versionName`/`versionCode` and the requested output name (default `0.0.2`).
+`DOMINION_CA` selects the CA bundled into the APK.
 
 `build-variant.sh` takes an output base, a 1024×1024 icon, and a 1024×1024
 transparent adaptive-foreground. Launcher icons are drawn with alpha and the
@@ -116,21 +129,33 @@ plate). Regenerate the square icons from the source marks with
 
 ## Publish
 
+The root `release.sh` is the supported path; `apps/release.sh` only republishes
+the client pair (APK + AppImage) for an existing version.
+
 ```sh
-./release.sh 0.1     # client-only: builds dominion_0.1.*, uploads both to release v0.1
+./release.sh 0.0.2     # client-only: builds dominion_0.0.2.*, uploads both to release v0.0.2
 ```
 
-For a full release, run the root script instead — it publishes the server binary,
-`SHA256SUMS`, and these clients together:
+For a full release, run the root script instead — it publishes the static server
+and terminal client, `ca.pem`, the Android APK, the Linux AppImage, and
+`SHA256SUMS` together. `--no-publish` builds and stages `dist/` without
+publishing:
 
 ```sh
 cd ..
-./release.sh 0.1              # server + clients
-./release.sh 0.1 --server-only  # server binary only
+./release.sh 0.0.2              # server + TUI + clients
+./release.sh 0.0.2 --server-only  # server + TUI only
+./release.sh 0.0.2 --no-publish   # build to dist/, do not publish
 ```
 
 ## Notes / limitations
 
 - The desktop AppImage depends on the system WebKitGTK at runtime (present on
   any desktop Linux, not on servers).
+- **Window icon**: the shell names itself `dominion` (X11 `WM_CLASS`, Wayland
+  `app_id`) and loads the icon from the AppImage for X11 (`_NET_WM_ICON`). On
+  Wayland the compositor has no per-window icon protocol and resolves the icon
+  from an installed `dominion.desktop`/`dominion.png`; integrate the AppImage
+  (e.g. AppImageLauncher or `appimaged`) for the title bar/task switcher to show
+  it. Without integration the window keeps the toolkit default.
 - iOS is not built here (needs macOS + signing).

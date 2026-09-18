@@ -3,10 +3,11 @@
 # can pin it via network_security_config.xml.
 #
 # Usage: ./sync-ca.sh [path-to-ca.pem]
-# Default source: ~/.config/dominion/ca.pem
+# Source precedence: the path argument, then $DOMINION_CA, then
+# ~/.config/dominion/ca.pem (the default location the server writes to).
 set -euo pipefail
 
-src="${1:-$HOME/.config/dominion/ca.pem}"
+src="${1:-${DOMINION_CA:-$HOME/.config/dominion/ca.pem}}"
 here="$(cd "$(dirname "$0")" && pwd)"
 dest="$here/res-raw/dominion_ca.pem"
 

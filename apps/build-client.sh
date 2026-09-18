@@ -12,6 +12,7 @@
 set -euo pipefail
 
 target="${1:-all}"
+version="${DOMINION_VERSION:-0.0.2}"
 here="$(cd "$(dirname "$0")" && pwd)"
 out="$here/../client_app"
 cd "$here"
@@ -20,13 +21,13 @@ mkdir -p "$out"
 
 case "$target" in
   desktop)
-    ./build-desktop.sh icons/original.png dominion_0.1
+    ./build-desktop.sh icons/original.png "dominion_$version"
     ;;
   android)
-    SKIP_DESKTOP=1 ./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+    SKIP_DESKTOP=1 DOMINION_VERSION="$version" ./build-variant.sh "dominion_$version" icons/original.png icons/original-foreground.png
     ;;
   all)
-    ./build-variant.sh dominion_0.1 icons/original.png icons/original-foreground.png
+    DOMINION_VERSION="$version" ./build-variant.sh "dominion_$version" icons/original.png icons/original-foreground.png
     ;;
   *)
     echo "usage: $0 [desktop|android|all]" >&2

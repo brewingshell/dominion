@@ -32,9 +32,6 @@ apps/.appimagetool
 *.apk
 *.AppImage
 *.AppImage.zsync
-# Distributable Android build is committed; the AppImage is attached to a
-# GitHub release instead (see apps/release.sh).
-!/client_app/dominion_0.1.apk
 apps/dist/
 apps/android/app/build/
 apps/android/.gradle/
