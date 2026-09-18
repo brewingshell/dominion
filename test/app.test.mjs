@@ -368,23 +368,61 @@ test("theme applies to an open terminal", () => {
   api.stopPolling();
 });
 
-test("servers section is hidden without a shell, and manage-servers uses the binding", () => {
+test("servers section shows with the desktop binding and manage-servers calls it", () => {
   const called = [];
-  const { document } = load([], {
+  const { api, document } = load([], {
     beforeEval: (w) => {
       w.dominionOpenSettings = () => { called.push("open"); };
       w.dominionChangeURL = () => { called.push("change"); };
     },
   });
+  assert.equal(api.canManageServers(), true);
   assert.equal(document.getElementById("settings-servers").hidden, false);
   document.getElementById("manage-servers").click();
   assert.deepEqual(called, ["open"]);
 });
 
 test("servers section is hidden in a plain browser", () => {
-  const { document } = load();
+  const { api, document } = load();
+  assert.equal(api.canManageServers(), false);
   assert.equal(document.getElementById("settings-servers").hidden, true);
 });
+
+test("servers section is hidden for a desktop build without the settings binding", () => {
+  // An older desktop shell has dominionChangeURL but not dominionOpenSettings;
+  // the entry must not appear, or its click would be a dead no-op.
+  const { api, document } = load([], {
+    beforeEval: (w) => { w.dominionChangeURL = () => {}; },
+  });
+  assert.equal(api.inShell(), true, "change-server is still available");
+  assert.equal(document.getElementById("change-server").hidden, false);
+  assert.equal(api.canManageServers(), false);
+  assert.equal(document.getElementById("settings-servers").hidden, true);
+});
+
+test("servers section is hidden for an Android shell older than the capability version", () => {
+  const { api, document, window } = load([], {
+    url: "https://localhost/",
+    userAgent: "Mozilla/5.0 dominion-shell/1.0",
+  });
+  assert.equal(api.inShell(), true);
+  assert.equal(api.canManageServers(), false, "1.0 predates saved-server management");
+  assert.equal(document.getElementById("settings-servers").hidden, true);
+  // A click must not navigate away from the portal.
+  document.getElementById("manage-servers").click();
+  assert.equal(window.location.href, "https://localhost/");
+});
+
+test("servers section shows for an Android shell at the capability version", () => {
+  const { api, document } = load([], {
+    url: "https://localhost/",
+    userAgent: "Mozilla/5.0 dominion-shell/1.1",
+  });
+  assert.equal(api.shellVersion().join("."), "1.1");
+  assert.equal(api.canManageServers(), true);
+  assert.equal(document.getElementById("settings-servers").hidden, false);
+});
+
 
 test("startup theme from localStorage is reflected on the buttons", () => {
   const { document } = load([], {

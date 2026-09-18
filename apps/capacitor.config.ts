@@ -9,7 +9,9 @@ const config: CapacitorConfig = {
     // https://localhost), which is mixed content; allow it.
     allowMixedContent: true,
     // Marks the shell so the server page can show the "Change server" button.
-    appendUserAgent: "dominion-shell/1.0",
+    // The version is the client capability version: the portal uses it to gate
+    // features a given build can service (see canManageServers in web/app.js).
+    appendUserAgent: "dominion-shell/1.1",
   },
   server: {
     androidScheme: "https",

@@ -178,6 +178,34 @@
       navigator.userAgent.includes("dominion-shell");
   }
 
+  // Shell capability versions. Android clients advertise their version in the
+  // user agent as "dominion-shell/<major>.<minor>"; a feature may only be shown
+  // when the installed client actually implements it, otherwise the server UI
+  // offers a control the shell cannot service (an inert button).
+  const SHELL_USER_AGENT = /dominion-shell\/(\d+)\.(\d+)/;
+  const SERVER_MANAGEMENT = [1, 1];
+
+  // shellVersion parses the client capability version, or null for a browser or
+  // a desktop build (which exposes capabilities as Go bindings instead).
+  function shellVersion() {
+    const m = SHELL_USER_AGENT.exec(navigator.userAgent);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+
+  function versionAtLeast(version, min) {
+    return version[0] > min[0] ||
+      (version[0] === min[0] && version[1] >= min[1]);
+  }
+
+  // canManageServers is true only when the shell can actually open and service
+  // its saved-server screen: the desktop binding is present, or the Android app
+  // is new enough. Older clients hide the entry rather than show a dead button.
+  function canManageServers() {
+    if (typeof window.dominionOpenSettings === "function") return true;
+    const v = shellVersion();
+    return !!v && versionAtLeast(v, SERVER_MANAGEMENT);
+  }
+
   // shellChangeTarget is the Android/browser destination for the change-server
   // action, or null when the desktop binding handles it.
   function shellChangeTarget() {
@@ -206,6 +234,7 @@
   }
 
   manageServersEl.addEventListener("click", () => {
+    if (!canManageServers()) return;
     settingsDialog.close();
     if (typeof window.dominionOpenSettings === "function") {
       window.dominionOpenSettings();
@@ -213,7 +242,6 @@
     }
     window.location.href = shellSettingsTarget();
   });
-
   function showApp() {
     state.locked = false;
     state.loggedIn = true;
@@ -925,7 +953,7 @@
 
   setKeysVisible(keysAllowed(), false);
   changeServerEl.hidden = !inShell();
-  settingsServersEl.hidden = !inShell();
+  settingsServersEl.hidden = !canManageServers();
   let initialTheme = currentTheme();
   try {
     const stored = localStorage.getItem(THEME_PREF);

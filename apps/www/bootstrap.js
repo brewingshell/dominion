@@ -161,6 +161,20 @@
     }
   }
 
+  // shellCanManageHosts reports whether this shell has a working saved-server
+  // backend. An older client whose bundle shows this view but cannot persist
+  // hosts would render an inert address book, so it falls back to Connect.
+  function shellCanManageHosts() {
+    if (SHELL === "desktop") {
+      return typeof window.dominionListHosts === "function" &&
+        typeof window.dominionSaveHost === "function";
+    }
+    if (SHELL === "android") {
+      return !!window.Capacitor?.Plugins?.Preferences;
+    }
+    return true; // a plain browser uses localStorage
+  }
+
   let pending = null;
 
   function persistAndGo(base, host, scheme) {
@@ -312,8 +326,14 @@
       );
     }
 
-    if (START_SETTINGS) {
+    if (START_SETTINGS && shellCanManageHosts()) {
       setView("settings");
+      return;
+    }
+    if (START_SETTINGS) {
+      // The shell's address book is unavailable; do not show a dead screen.
+      setView("connect");
+      showError(errEl, "This app version cannot manage saved servers. Update the app to use them.");
       return;
     }
 
