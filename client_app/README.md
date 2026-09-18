@@ -3,17 +3,14 @@
 Built client binaries land here. Everything except this README is **gitignored**
 — these are build outputs.
 
-| File | Icon | Platform | Size |
-|------|------|----------|------|
-| `dominion_0.0.2.apk` | original mark | Android | ~3.7 MB |
-| `dominion_0.0.2.AppImage` | original mark | Linux desktop | ~3.2 MB |
-| `dominion.apk` | alternate (personal) mark | Android | ~3.9 MB |
-| `dominion.AppImage` | alternate (personal) mark | Linux desktop | ~3.2 MB |
+| File | Platform | Size |
+|------|----------|------|
+| `dominion_<version>.apk` | Android | ~3.7 MB |
+| `dominion_<version>.AppImage` | Linux desktop | ~3.2 MB |
 
-`dominion_<version>.*` uses the project's original mark and is the build to
-publish. The `dominion.*` (no version) builds use a personal icon kept
-**outside** the repository (`apps/icons/terran.png`, gitignored) — keep those
-local.
+Both use the project's original mark and are the builds to publish; the root
+`release.sh` builds them here and stages copies for the GitHub release.
+`DOMINION_VERSION` sets the `_<version>` suffix (default `0.0.2`).
 
 > These are build outputs and do **not** update themselves. When the portal
 > gains or changes a shell feature (for example saved servers, which need

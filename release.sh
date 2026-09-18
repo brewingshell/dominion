@@ -104,6 +104,12 @@ fi
 
 notes="dominion $tag — server binary, terminal client, and client builds.
 
+$(awk -v heading="## [$version]" '
+  $0 == heading { grab=1; next }
+  grab && /^## / { exit }
+  grab { print }
+' CHANGELOG.md)
+
 Server + TUI: static linux/amd64 binaries (no runtime dependencies beyond tmux).
 Clients: Android APK and Linux AppImage (see apps/README.md).
 ca.pem is the CA the bundled Android client trusts; install it for HTTPS.
