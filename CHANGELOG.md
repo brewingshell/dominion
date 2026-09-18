@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.0.3]
+
+### Fixed
+
+- Killing a session no longer returns `500` when the tmux server is shutting
+  down after its last session. A failed `kill-session` (including the silent,
+  empty-output case) is now confirmed against `has-session`, so the API still
+  reports `404 Not Found`.
+
 ## [0.0.2]
 
 ### Added
@@ -31,5 +40,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Vendored xterm.js carries local Android soft-keyboard/IME input fixes, and a
   test guards the bundle against drift.
 
-[Unreleased]: https://github.com/brewingshell/dominion/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/brewingshell/dominion/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/brewingshell/dominion/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/brewingshell/dominion/releases/tag/v0.0.2

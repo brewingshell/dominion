@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -184,5 +185,37 @@ func TestTargetsAreExact(t *testing.T) {
 func TestTargetPrefix(t *testing.T) {
 	if got := target("web"); got != "=web" {
 		t.Fatalf("target(%q) = %q, want exact marker", "web", got)
+	}
+}
+
+// fakeTmux writes a stub tmux whose exit status for kill-session/has-session is
+// controlled per test, so the kill fallback logic can be exercised without the
+// real server and without timing races.
+func fakeTmux(t *testing.T, killExit, hasExit int) string {
+	t.Helper()
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "tmux")
+	script := fmt.Sprintf("#!/bin/sh\ncase \"$1\" in\n  kill-session) exit %d ;;\n  has-session) exit %d ;;\nesac\nexit 0\n", killExit, hasExit)
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return bin
+}
+
+// TestKillSessionSilentFailure guards the race seen on CI: when the tmux server
+// is shutting down after its last session, kill-session exits non-zero with no
+// output, so string matching alone cannot detect it. If the session is really
+// gone the call must still report ErrNotFound (404) rather than a 500.
+func TestKillSessionSilentFailure(t *testing.T) {
+	if err := KillSession(fakeTmux(t, 1, 1), "gone"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("silent kill failure: want ErrNotFound, got %v", err)
+	}
+}
+
+// TestKillSessionRealFailure verifies the fallback does not mask a genuine kill
+// failure: if the session still exists, the underlying error is returned.
+func TestKillSessionRealFailure(t *testing.T) {
+	if err := KillSession(fakeTmux(t, 1, 0), "busy"); err == nil || errors.Is(err, ErrNotFound) {
+		t.Fatalf("real kill failure: want a non-ErrNotFound error, got %v", err)
 	}
 }

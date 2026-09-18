@@ -196,6 +196,13 @@ func KillSession(bin, name string) error {
 				return ErrNotFound
 			}
 		}
+		// The message match can miss a race in which the server is shutting
+		// down after its last session and the client exits non-zero with no
+		// output at all. Ask tmux directly: if the session is gone, the kill
+		// lost the race and the requested session never existed.
+		if !HasSession(bin, name) {
+			return ErrNotFound
+		}
 		return err
 	}
 	return nil
