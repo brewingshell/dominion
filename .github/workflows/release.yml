@@ -47,11 +47,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # The action's default "packages" includes the removed legacy "tools"
+      # package, so it fails during setup. Install only what the build needs
+      # here, after accepting the licences.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Android SDK packages
         run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Desktop client build dependencies
         run: |
