@@ -162,10 +162,15 @@ func promptHTML(saved config, errMsg, view string) string {
 }
 
 func main() {
+	// Name the application before the window exists: this sets WM_CLASS on X11
+	// and the app_id on Wayland, which the compositor uses to find the icon.
+	setAppIdentity()
 	w := webview.New(false)
 	defer w.Destroy()
 	w.SetTitle("dominion")
 	w.SetSize(1100, 720, webview.HintNone)
+	// X11 draws the window icon from _NET_WM_ICON; set it from the packaged PNG.
+	setWindowIcon(w.Window())
 
 	showPrompt := func(errMsg string) {
 		w.SetHtml(promptHTML(loadConfig(), errMsg, ""))

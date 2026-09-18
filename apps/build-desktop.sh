@@ -12,7 +12,7 @@
 set -euo pipefail
 
 icon="${1:-icons/original.png}"
-base="${2:-dominion_0.1}"
+base="${2:-dominion_${DOMINION_VERSION:-0.0.2}}"
 
 here="$(cd "$(dirname "$0")" && pwd)"
 out="$here/../client_app"
@@ -58,12 +58,18 @@ Name=dominion
 Comment=Connect to a dominion tmux portal
 Exec=dominion-desktop
 Icon=dominion
+StartupWMClass=dominion
 Categories=TerminalEmulator;Network;
 EOF
 
-# Icon: use the 1024 square source resized to 256.
+# Icon: use the 1024 square source resized to 256. The copies cover the
+# launcher (hicolor) and the AppImage root; .DirIcon lets a file manager and
+# appimaged read it directly. On Wayland the compositor resolves the window
+# icon from this .desktop file's Icon= via the app_id, since xdg-shell has no
+# per-window icon protocol.
 convert "$icon" -resize 256x256 PNG32:"$appdir/dominion.png"
 cp "$appdir/dominion.png" "$appdir/usr/share/icons/hicolor/256x256/apps/dominion.png"
+cp "$appdir/dominion.png" "$appdir/.DirIcon"
 
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh
