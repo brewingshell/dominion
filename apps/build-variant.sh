@@ -19,7 +19,13 @@ base="${1:?usage: build-variant.sh <output-base> <icon.png> <foreground.png>}"
 icon="${2:?missing icon.png}"
 fg="${3:?missing foreground.png}"
 
+# The icon paths are relative to wherever the script was invoked (release.sh
+# passes repo-root paths, build-client.sh passes apps-relative ones), so pin
+# them before cd'ing into apps/.
 here="$(cd "$(dirname "$0")" && pwd)"
+invoked_from="$(pwd)"
+case "$icon" in /*) ;; *) icon="$invoked_from/$icon" ;; esac
+case "$fg" in /*) ;; *) fg="$invoked_from/$fg" ;; esac
 out="$here/../client_app"
 android_res="$here/android/app/src/main/res"
 cd "$here"
