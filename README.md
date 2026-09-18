@@ -7,7 +7,8 @@
 <p align="center">
   A tiny, self-hosted web portal for <b>tmux</b>. Every tmux session on the
   machine becomes a tab, and each tab is a fully interactive terminal in the
-  browser. One Go binary, no runtime dependencies, no database.
+  browser. A single static Go binary — no database, no runtime beyond
+  <b>tmux</b>.
 </p>
 
 <p align="center">
@@ -32,11 +33,13 @@ It downloads the static `linux/amd64` server binary, verifies its SHA-256 agains
 `~/.config/dominion/.env`, and enables the systemd user service. Requires
 `tmux`.
 
-| Variable               | Effect                                             |
-|------------------------|----------------------------------------------------|
-| `DOMINION_VERSION=v0.1` | Install a specific release instead of the latest. |
-| `DOMINION_INSTALL_DIR`  | Where to put the binary and `run.sh`.             |
-| `DOMINION_NO_SERVICE=1` | Install the files without touching systemd.       |
+| Variable                  | Effect                                                    |
+|---------------------------|-----------------------------------------------------------|
+| `DOMINION_VERSION=vX.Y.Z` | Install a specific release instead of the latest.         |
+| `DOMINION_INSTALL_DIR`    | Where to put the binary and `run.sh` (`~/.local/bin`).    |
+| `DOMINION_CONFIG_DIR`     | Where the `.env` lives (`~/.config/dominion`).            |
+| `DOMINION_TUI=1`          | Also install the terminal client.                         |
+| `DOMINION_NO_SERVICE=1`   | Install the files without touching systemd.               |
 
 Prefer to build it yourself? See [Quick start](#quick-start). The release also
 carries the [client apps](#client-apps) (Android APK, Linux AppImage) and the
@@ -45,8 +48,9 @@ carries the [client apps](#client-apps) (Android APK, Linux AppImage) and the
 Releases are cut from a version tag: `.github/workflows/release.yml` runs the
 same `release.sh` used locally, building the static server and terminal client,
 the Android APK, the Linux AppImage, and the bundled `ca.pem`, then publishing
-them with `SHA256SUMS` as one GitHub release. See
-[`CHANGELOG.md`](CHANGELOG.md) for what changed in each version.
+them with `SHA256SUMS` as one GitHub release. The tag (`vX.Y.Z`) is the single
+source of truth for the version, and the release notes come from that version's
+section in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Security first
 
@@ -68,7 +72,7 @@ dominion is a door to your shells. Read this before exposing it to anything.
 - **The portal can create and kill tmux sessions.** Killing a session ends every
   process inside it. The `dominion` session that hosts the server is protected
   and cannot be killed.
-- Login attempts are rate limited per client IP, sessions tokens are in-memory
+- Login attempts are rate limited per client IP, session tokens are in-memory
   (a restart logs everyone out), and there is a lock button that hides the UI
   and requires the PIN again while keeping your terminals alive.
 
@@ -82,7 +86,7 @@ If that trade-off is acceptable for your network, the rest is pleasant to use.
 ## Quick start
 
 ```sh
-git clone https://github.com/BrewingShell/dominion
+git clone https://github.com/brewingshell/dominion
 cd dominion
 go build -trimpath -ldflags "-s -w" -o dominion .
 ./dominion
@@ -135,14 +139,18 @@ tmux detaches there is no tracked main PID (`Type=oneshot` + `RemainAfterExit`),
 and `KillMode=process` plus `ExecStop` ensure stopping the unit tears down only
 the `dominion` session, never your other tmux sessions.
 
-`run.sh` reads a few environment variables if you need to override its defaults:
+`run.sh` and the server each read a few environment variables. `run.sh` passes
+its flags through to the binary:
 
 | Variable        | Default                      | Purpose                              |
 |-----------------|------------------------------|--------------------------------------|
 | `DOMINION_BIN`  | `<checkout>/dominion`        | Server binary to run.                |
 | `DOMINION_ADDR` | `:5550`                      | Listen address.                      |
 | `DOMINION_TMUX` | `/usr/bin/tmux`              | tmux binary.                         |
-| `DOMINION_ENV`  | `~/.config/dominion/.env`    | Config file passed to the server.    |
+
+The server resolves its PIN and config independently, searching these `.env`
+files in order (first match wins): `$DOMINION_ENV`, `./.env`, then
+`~/.config/dominion/.env`.
 
 ## TLS
 
@@ -188,6 +196,7 @@ HTTPS sessions stay protected.
 | `-tls-cert`, `-tls-key`, `-tls-ca` | generated | Use existing certificate material.              |
 | `-tls-san`     | none                   | Extra DNS name or IP for the certificate (repeatable). |
 | `-fingerprint` |                        | Print the CA path and fingerprint, then exit.      |
+| `-version`     |                        | Print the version and exit.                        |
 | `-branding`    | `assets`               | Directory of logo overrides (see [Branding](#branding)). |
 
 Prefer `DOMINION_PIN` (env or `.env`) over `-pin`: a flag is visible in `ps` to
@@ -203,8 +212,8 @@ other local users, an environment variable is not. Precedence is
 ## Branding
 
 The login mark is an original asset under `assets/` (`logo.svg` and a raster
-`logo.png`). To use your own, drop a file into `assets/` — no rebuild needed,
-just restart:
+`logo.png`); the favicon and iOS icon default to the embedded copies in `web/`.
+To use your own, drop a file into `assets/` — no rebuild needed, just restart:
 
 - `assets/override_logo.png` (or `.svg`/`.webp`) overrides the login mark and,
   by default, the favicon and app icon too.
@@ -219,13 +228,13 @@ the embedded default. Point elsewhere with `-branding /path/to/dir`.
 ## Client apps
 
 Thin native shells that remember the portal address and load the same
-server-served UI. Neither bundles a browser engine:
+server-served UI. The Android and desktop shells bundle no browser engine:
 
 | Target | Stack | Size |
 |--------|-------|------|
 | Android APK | Capacitor + system WebView | ~3.7 MB |
 | Linux AppImage | Go + system WebView (WebKitGTK) | ~3.2 MB |
-| Terminal (TUI) | Go + tview | ~7 MB |
+| Terminal (TUI) | Go + tview | ~7.7 MB |
 
 The Android app trusts the bundled local CA (encrypted by default); the desktop
 app uses plain HTTP, since WebKitGTK cannot bypass a self-signed certificate.
@@ -283,8 +292,11 @@ npm test
 Layout:
 
 ```
-main.go                    flags, embedded web assets, TLS listener
+main.go                    flags, version, embedded web assets, TLS listener
 env.go                     .env loading and PIN resolution
+listen.go                  dual TLS/plain-HTTP listener
+install.sh                 build + install the systemd user service
+run.sh                     the server loop that dominion.service runs in tmux
 get.sh                     one-line installer for release builds
 cmd/dominion-client-tui/   terminal client entry point
 internal/tmux/             session listing, exact targeting, name validation
@@ -302,6 +314,8 @@ apps/                      Android APK + Linux AppImage shells
 client_app/                built client binaries (gitignored)
 release.sh                 build + publish a release (server binary + clients)
 CHANGELOG.md               release notes by version
+CONTRIBUTING.md            dev loop, checks, release process
+SECURITY.md                how to report a vulnerability
 .github/workflows/         CI tests and the tag-driven release pipeline
 ```
 
