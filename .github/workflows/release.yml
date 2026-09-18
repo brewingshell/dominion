@@ -79,7 +79,7 @@ jobs:
           CA_B64: ${{ secrets.DOMINION_CA_PEM_B64 }}
         run: |
           if [ -z "$CA_B64" ]; then
-            echo "::error::secret DOMINION_CA_PEM_B64 is not set; see v0.0.2.md" >&2
+            echo "::error::secret DOMINION_CA_PEM_B64 is not set; see CONTRIBUTING.md" >&2
             exit 1
           fi
           printf '%s' "$CA_B64" | base64 -d > "$RUNNER_TEMP/ci-ca.pem"
