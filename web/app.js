@@ -21,6 +21,8 @@
   const drawerCloseEl = document.getElementById("drawer-close");
   const keysEl = document.getElementById("keys");
   const keysToggleEl = document.getElementById("keys-toggle");
+  const keysMoreEl = document.getElementById("keys-more");
+  const keysCtrlEl = document.getElementById("keys-ctrl");
   const newSessionEl = document.getElementById("new-session");
   const newDialog = document.getElementById("new-dialog");
   const newForm = document.getElementById("new-form");
@@ -48,6 +50,7 @@
   const PINNED_SESSION = "dominion";
   const THEME_PREF = "dominion.theme";
   const KEYS_PREF = "dominion.keys";
+  const CTRLKEYS_PREF = "dominion.ctrlkeys";
   const RAW_PREF = "dominion.rawinput";
   const ACTIVE_PREF = "dominion.active";
   const DESKTOP_FONT = 14;
@@ -594,6 +597,35 @@
     });
   }
 
+  // ctrlKeysVisible reports whether the extra control-key row (^C ^D ^Z ...) is
+  // expanded. It is off by default and remembered across sessions.
+  function ctrlKeysVisible() {
+    try {
+      return localStorage.getItem(CTRLKEYS_PREF) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  // setCtrlKeysVisible shows or hides the control-key row, independent of the
+  // main key toolbar. The "more" button reflects the state for assistive tech.
+  function setCtrlKeysVisible(on, persist) {
+    keysCtrlEl.hidden = !on;
+    keysMoreEl.setAttribute("aria-expanded", on ? "true" : "false");
+    keysMoreEl.setAttribute(
+      "aria-label",
+      on ? "Hide control keys" : "Show control keys"
+    );
+    if (persist) {
+      try {
+        localStorage.setItem(CTRLKEYS_PREF, on ? "1" : "0");
+      } catch {}
+    }
+    requestAnimationFrame(() => {
+      if (state.active) fitTab(state.tabs.get(state.active));
+    });
+  }
+
   function refitActive() {
     if (state.active) fitTab(state.tabs.get(state.active));
   }
@@ -683,6 +715,7 @@
     closeMenu();
     clearMods();
     setKeysVisible(keysAllowed(), false);
+    setCtrlKeysVisible(ctrlKeysVisible(), false);
     setRawInput(rawInputEnabled(), false);
     const size = termFontSize();
     for (const tab of state.tabs.values()) {
@@ -700,6 +733,11 @@
   });
 
   keysEl.addEventListener("click", (e) => {
+    const moreBtn = e.target.closest("button.key-more");
+    if (moreBtn) {
+      setCtrlKeysVisible(keysCtrlEl.hidden, true);
+      return;
+    }
     const modBtn = e.target.closest("button.key-mod");
     if (modBtn) {
       const mod = modBtn.dataset.mod;
@@ -1219,6 +1257,7 @@
   }
 
   setKeysVisible(keysAllowed(), false);
+  setCtrlKeysVisible(ctrlKeysVisible(), false);
   setRawInput(rawInputEnabled(), false);
   changeServerEl.hidden = !inShell();
   settingsServersEl.hidden = !canManageServers();

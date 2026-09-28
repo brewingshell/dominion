@@ -58,25 +58,30 @@
     <div id="scrim" class="scrim"></div>
     <main id="terminals"></main>
     <div id="keys" role="toolbar" aria-label="Terminal keys" hidden>
-      <button class="key" type="button" data-key="esc" aria-label="Escape">Esc</button>
-      <button class="key" type="button" data-key="tab" aria-label="Tab">Tab</button>
-      <button class="key" type="button" data-key="enter" aria-label="Enter">&#x21b5;</button>
-      <button class="key" type="button" data-key="bs" aria-label="Backspace">&#x232b;</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-c" aria-label="Control C">^C</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-d" aria-label="Control D">^D</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-z" aria-label="Control Z">^Z</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-l" aria-label="Control L">^L</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-a" aria-label="Control A">^A</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-e" aria-label="Control E">^E</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-u" aria-label="Control U">^U</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-w" aria-label="Control W">^W</button>
-      <button class="key key-ctrl" type="button" data-key="ctrl-r" aria-label="Control R">^R</button>
-      <button class="key key-mod" type="button" data-mod="ctrl" aria-pressed="false" aria-label="Control">Ctrl</button>
-      <button class="key key-mod" type="button" data-mod="alt" aria-pressed="false" aria-label="Alt">Alt</button>
-      <button class="key key-arrow" type="button" data-key="left" aria-label="Arrow left">&#x2190;</button>
-      <button class="key key-arrow" type="button" data-key="up" aria-label="Arrow up">&#x2191;</button>
-      <button class="key key-arrow" type="button" data-key="down" aria-label="Arrow down">&#x2193;</button>
-      <button class="key key-arrow" type="button" data-key="right" aria-label="Arrow right">&#x2192;</button>
+      <div id="keys-main" class="keys-row">
+        <button class="key key-more" type="button" id="keys-more" aria-expanded="false" aria-controls="keys-ctrl" title="Control keys" aria-label="Show control keys">&#x22ef;</button>
+        <button class="key" type="button" data-key="esc" aria-label="Escape">Esc</button>
+        <button class="key" type="button" data-key="tab" aria-label="Tab">Tab</button>
+        <button class="key" type="button" data-key="enter" aria-label="Enter">&#x21b5;</button>
+        <button class="key" type="button" data-key="bs" aria-label="Backspace">&#x232b;</button>
+        <button class="key key-mod" type="button" data-mod="ctrl" aria-pressed="false" aria-label="Control">Ctrl</button>
+        <button class="key key-mod" type="button" data-mod="alt" aria-pressed="false" aria-label="Alt">Alt</button>
+        <button class="key key-arrow" type="button" data-key="left" aria-label="Arrow left">&#x2190;</button>
+        <button class="key key-arrow" type="button" data-key="up" aria-label="Arrow up">&#x2191;</button>
+        <button class="key key-arrow" type="button" data-key="down" aria-label="Arrow down">&#x2193;</button>
+        <button class="key key-arrow" type="button" data-key="right" aria-label="Arrow right">&#x2192;</button>
+      </div>
+      <div id="keys-ctrl" class="keys-row" hidden>
+        <button class="key key-ctrl" type="button" data-key="ctrl-c" aria-label="Control C">^C</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-d" aria-label="Control D">^D</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-z" aria-label="Control Z">^Z</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-l" aria-label="Control L">^L</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-a" aria-label="Control A">^A</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-e" aria-label="Control E">^E</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-u" aria-label="Control U">^U</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-w" aria-label="Control W">^W</button>
+        <button class="key key-ctrl" type="button" data-key="ctrl-r" aria-label="Control R">^R</button>
+      </div>
     </div>
     <div id="empty" class="empty" hidden>
       <p>No tmux sessions found.</p>

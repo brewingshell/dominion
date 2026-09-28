@@ -827,24 +827,37 @@ code {
 
   #keys {
     display: flex;
-    gap: 6px;
-    align-items: center;
+    flex-direction: column;
     flex: none;
     padding: 6px 8px;
     padding-bottom: calc(6px + env(safe-area-inset-bottom));
     background: var(--panel);
     border-top: 1px solid var(--border);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
   }
 
   #keys[hidden] {
     display: none;
   }
 
-  #keys::-webkit-scrollbar {
+  .keys-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .keys-row + .keys-row {
+    margin-top: 6px;
+  }
+
+  .keys-row[hidden] {
+    display: none;
+  }
+
+  .keys-row::-webkit-scrollbar {
     display: none;
   }
 
@@ -873,6 +886,18 @@ code {
   .key-mod {
     min-width: 52px;
     font-size: 12px;
+  }
+
+  .key-more {
+    min-width: 44px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--muted);
+  }
+
+  .key-more[aria-expanded="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .key-ctrl {

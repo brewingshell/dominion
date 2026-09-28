@@ -143,7 +143,7 @@ export function load(routes = [], options = {}) {
     "canManageServers,shellVersion,changePIN,setPinError," +
     "sendToTab,rawInputEnabled,rawInputDefault,setRawInput,setTabRawInput," +
     "handleRawInput,forwardCompositionDelta,KEY_SEQ," +
-    "bindTouchScroll,cellHeight," +
+    "bindTouchScroll,cellHeight,ctrlKeysVisible,setCtrlKeysVisible," +
     "TERM_THEMES};\n";
   window.eval(src.slice(0, idx) + hook + src.slice(idx));
 

@@ -14,9 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   helper textarea empty, so the shell receives characters one at a time like a
   terminal instead of only on a word boundary. Autocorrect rewrites are replayed
   as backspaces plus the corrected text.
-- An expanded mobile key row with dedicated control keys: Ctrl+C, Ctrl+D,
-  Ctrl+Z, Ctrl+L, Ctrl+A, Ctrl+E, Ctrl+U, Ctrl+W, Ctrl+R, Enter and Backspace,
-  alongside the existing Esc, Tab, Ctrl/Alt modifiers and arrows.
+- A second, independently togglable mobile key row for control keys: Ctrl+C,
+  Ctrl+D, Ctrl+Z, Ctrl+L, Ctrl+A, Ctrl+E, Ctrl+U, Ctrl+W and Ctrl+R. It starts
+  collapsed and is expanded from a "more" button in the main row, so the common
+  keys (Esc, Tab, Enter, Backspace, Ctrl/Alt, arrows) stay on one line. The
+  choice is remembered across sessions.
 - Touch scrolling in the terminal. xterm scrolls only on wheel events and the
   scrollable element sits under the canvas, so dragging on a phone did nothing.
   A vertical swipe is now translated to `scrollLines()` and `touch-action` stops
