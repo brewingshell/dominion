@@ -48,16 +48,28 @@
   const PINNED_SESSION = "dominion";
   const THEME_PREF = "dominion.theme";
   const KEYS_PREF = "dominion.keys";
+  const RAW_PREF = "dominion.rawinput";
   const ACTIVE_PREF = "dominion.active";
   const DESKTOP_FONT = 14;
   const MOBILE_FONT = DESKTOP_FONT * 0.75;
   const KEY_SEQ = {
     esc: "\x1b",
     tab: "\x09",
+    enter: "\x0d",
+    bs: "\x7f",
     left: "\x1b[D",
     up: "\x1b[A",
     down: "\x1b[B",
     right: "\x1b[C",
+    "ctrl-c": "\x03",
+    "ctrl-d": "\x04",
+    "ctrl-z": "\x1a",
+    "ctrl-l": "\x0c",
+    "ctrl-a": "\x01",
+    "ctrl-e": "\x05",
+    "ctrl-u": "\x15",
+    "ctrl-w": "\x17",
+    "ctrl-r": "\x12",
   };
   const MOD_KEYS = ["ctrl", "alt"];
   const encoder = new TextEncoder();
@@ -125,7 +137,7 @@
         } catch {}
       }
     }
-    for (const btn of settingsForm.querySelectorAll(".seg-btn")) {
+    for (const btn of settingsForm.querySelectorAll(".seg-btn[data-theme]")) {
       btn.setAttribute("aria-pressed", btn.dataset.theme === t ? "true" : "false");
     }
   }
@@ -240,8 +252,12 @@
     settingsDialog.showModal();
   });
 
-  for (const btn of settingsForm.querySelectorAll(".seg-btn")) {
+  for (const btn of settingsForm.querySelectorAll(".seg-btn[data-theme]")) {
     btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
+  }
+
+  for (const btn of settingsForm.querySelectorAll(".raw-btn")) {
+    btn.addEventListener("click", () => setRawInput(btn.dataset.raw === "on", true));
   }
 
   // setPinError shows msg in the change-PIN section, or clears it when msg is
@@ -357,10 +373,198 @@
     for (const mod of MOD_KEYS) setMod(mod, false);
   }
 
-  function sendData(str) {
-    const tab = state.active ? state.tabs.get(state.active) : null;
+  function sendToTab(tab, str) {
     if (tab && tab.ws && tab.ws.readyState === WebSocket.OPEN) {
       tab.ws.send(encoder.encode(applyModifiers(str)));
+    }
+  }
+
+  function sendData(str) {
+    sendToTab(state.active ? state.tabs.get(state.active) : null, str);
+  }
+
+  // --- touch scrolling ------------------------------------------------------
+  // xterm 6 scrolls through a JS wheel handler on .xterm-viewport, with the
+  // canvas layered over it in .xterm-screen. A touch gesture never produces a
+  // wheel event and never reaches the viewport, so dragging on a phone does
+  // nothing (there is no scrollable element under the finger). Translate a
+  // vertical swipe into scrollLines() and disable the platform's own panning
+  // with touch-action, so a drag scrolls the local scrollback on every device.
+  function cellHeight(tab) {
+    if (!tab.term) return 0;
+    const el = tab.term.element;
+    const screen =
+      el && el.querySelector ? el.querySelector(".xterm-screen") : null;
+    const rows = tab.term.rows || 0;
+    const px = (screen ? screen.clientHeight : el ? el.clientHeight : 0) || 0;
+    return rows > 0 && px > 0 ? px / rows : 0;
+  }
+
+  // bindTouchScroll installs the swipe-to-scroll listeners on a tab's terminal
+  // container. Binding is idempotent.
+  function bindTouchScroll(tab) {
+    if (!tab.el || tab.touchBound) return;
+    tab.touchBound = true;
+    tab.touchActive = false;
+    tab.touchAcc = 0;
+    tab.touchY = 0;
+
+    const start = (e) => {
+      if (e.touches.length !== 1) {
+        tab.touchActive = false;
+        return;
+      }
+      tab.touchActive = true;
+      tab.touchAcc = 0;
+      tab.touchY = e.touches[0].clientY;
+    };
+    const move = (e) => {
+      if (!tab.touchActive || e.touches.length !== 1 || !tab.term) return;
+      const y = e.touches[0].clientY;
+      tab.touchAcc += y - tab.touchY;
+      tab.touchY = y;
+      const cell = cellHeight(tab);
+      if (cell <= 0) return;
+      const lines = Math.trunc(tab.touchAcc / cell);
+      if (lines === 0) return;
+      // Keep the sub-cell remainder so slow drags still advance by one line.
+      tab.touchAcc -= lines * cell;
+      // Dragging the finger down reveals older output, so scroll up.
+      tab.term.scrollLines(-lines);
+      if (e.cancelable) e.preventDefault();
+    };
+    const end = () => {
+      tab.touchActive = false;
+      tab.touchAcc = 0;
+    };
+
+    tab.el.addEventListener("touchstart", start, { passive: true });
+    tab.el.addEventListener("touchmove", move, { passive: false });
+    tab.el.addEventListener("touchend", end, { passive: true });
+    tab.el.addEventListener("touchcancel", end, { passive: true });
+  }
+
+  // --- raw keyboard input ---------------------------------------------------
+  // Android soft keyboards are IMEs: they compose a whole word, autocorrect it,
+  // and only hand it over on a word boundary, so a terminal sees nothing until
+  // space and autocomplete can rewrite a command. Raw mode forwards the IME's
+  // composition deltas as they arrive and keeps the helper textarea empty, so
+  // the shell (and readline) receives characters one by one, like Termux. It is
+  // on by default on mobile and can be switched off in Settings.
+  function rawInputDefault() {
+    return mobileQuery.matches;
+  }
+
+  function rawInputEnabled() {
+    try {
+      const stored = localStorage.getItem(RAW_PREF);
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+    } catch {}
+    return rawInputDefault();
+  }
+
+  function setRawInput(on, persist) {
+    if (persist) {
+      try {
+        localStorage.setItem(RAW_PREF, on ? "1" : "0");
+      } catch {}
+    }
+    for (const btn of settingsForm.querySelectorAll(".raw-btn")) {
+      btn.setAttribute(
+        "aria-pressed",
+        btn.dataset.raw === (on ? "on" : "off") ? "true" : "false"
+      );
+    }
+    for (const tab of state.tabs.values()) setTabRawInput(tab, on);
+  }
+
+  // setTabRawInput binds or unbinds the raw input listeners on a terminal's
+  // hidden textarea. Binding is idempotent so polling and preference changes can
+  // call it freely.
+  function setTabRawInput(tab, on) {
+    if (!tab.term) return;
+    tab.raw = on;
+    tab.rawLast = "";
+    const ta = tab.term.textarea;
+    if (!ta) return;
+    if (on && !tab.rawBound) {
+      tab.rawBeforeHandler = (e) => handleRawInput(tab, e);
+      // The IME may still write the committed text into the textarea even after
+      // it was forwarded; clear it so a later delete cannot re-propagate it.
+      tab.rawEndHandler = () => {
+        if (tab.term && tab.term.textarea) tab.term.textarea.value = "";
+      };
+      ta.addEventListener("beforeinput", tab.rawBeforeHandler, true);
+      ta.addEventListener("compositionend", tab.rawEndHandler, true);
+      tab.rawBound = true;
+      tab.rawLast = "";
+    } else if (!on && tab.rawBound) {
+      ta.removeEventListener("beforeinput", tab.rawBeforeHandler, true);
+      ta.removeEventListener("compositionend", tab.rawEndHandler, true);
+      tab.rawBound = false;
+    }
+  }
+
+  // rawKeyAttrs disables the platform's autocomplete/spellcheck on the helper
+  // textarea. xterm 6.0.0 sets autocorrect/autocapitalize/spellcheck but omits
+  // autocomplete, which is what Android uses to offer suggestions.
+  function rawKeyAttrs(ta) {
+    if (!ta) return;
+    ta.setAttribute("autocomplete", "off");
+    ta.setAttribute("autocorrect", "off");
+    ta.setAttribute("autocapitalize", "none");
+    ta.setAttribute("spellcheck", "false");
+  }
+
+  // forwardCompositionDelta sends only the part of next not already forwarded,
+  // emitting backspaces when the IME rewrites the word (autocorrect or a picked
+  // suggestion).
+  function forwardCompositionDelta(tab, next) {
+    const prev = tab.rawLast || "";
+    let p = 0;
+    const min = Math.min(prev.length, next.length);
+    while (p < min && prev[p] === next[p]) p++;
+    if (p < prev.length) sendToTab(tab, "\x7f".repeat(prev.length - p));
+    if (p < next.length) sendToTab(tab, next.slice(p));
+    tab.rawLast = next;
+  }
+
+  function handleRawInput(tab, e) {
+    if (!tab.raw) return;
+    // deleteContentBackward and insertLineBreak are normally already handled by
+    // xterm's keydown (which prevents this event); reaching here means the IME
+    // produced them, so forward them too.
+    const type = e.inputType;
+    const data = e.data || "";
+    if (type === "insertCompositionText") {
+      forwardCompositionDelta(tab, data);
+      e.preventDefault();
+      return;
+    }
+    if (type === "insertText" || type === "insertReplacementText") {
+      // The commit can repeat text already sent as composition deltas.
+      if (data && data !== tab.rawLast) sendToTab(tab, data);
+      tab.rawLast = "";
+      e.preventDefault();
+      return;
+    }
+    if (type === "deleteContentBackward") {
+      sendToTab(tab, "\x7f");
+      tab.rawLast = "";
+      e.preventDefault();
+      return;
+    }
+    if (type === "deleteContentForward") {
+      sendToTab(tab, "\x1b[3~");
+      tab.rawLast = "";
+      e.preventDefault();
+      return;
+    }
+    if (type === "insertLineBreak" || type === "insertParagraph") {
+      sendToTab(tab, "\r");
+      tab.rawLast = "";
+      e.preventDefault();
     }
   }
 
@@ -479,6 +683,7 @@
     closeMenu();
     clearMods();
     setKeysVisible(keysAllowed(), false);
+    setRawInput(rawInputEnabled(), false);
     const size = termFontSize();
     for (const tab of state.tabs.values()) {
       if (tab.term) tab.term.options.fontSize = size;
@@ -810,10 +1015,13 @@
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(el);
+    rawKeyAttrs(term.textarea);
 
     tab.el = el;
     tab.term = term;
     tab.fit = fit;
+    setTabRawInput(tab, rawInputEnabled());
+    bindTouchScroll(tab);
 
     term.onData((data) => {
       if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
@@ -1011,6 +1219,7 @@
   }
 
   setKeysVisible(keysAllowed(), false);
+  setRawInput(rawInputEnabled(), false);
   changeServerEl.hidden = !inShell();
   settingsServersEl.hidden = !canManageServers();
   let initialTheme = currentTheme();

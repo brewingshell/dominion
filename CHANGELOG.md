@@ -6,6 +6,35 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- "Char by char" keyboard mode (on by default on mobile, toggled in Settings).
+  Android soft keyboards compose and autocorrect a whole word before handing it
+  over; this mode forwards each composition delta as it arrives and keeps the
+  helper textarea empty, so the shell receives characters one at a time like a
+  terminal instead of only on a word boundary. Autocorrect rewrites are replayed
+  as backspaces plus the corrected text.
+- An expanded mobile key row with dedicated control keys: Ctrl+C, Ctrl+D,
+  Ctrl+Z, Ctrl+L, Ctrl+A, Ctrl+E, Ctrl+U, Ctrl+W, Ctrl+R, Enter and Backspace,
+  alongside the existing Esc, Tab, Ctrl/Alt modifiers and arrows.
+- Touch scrolling in the terminal. xterm scrolls only on wheel events and the
+  scrollable element sits under the canvas, so dragging on a phone did nothing.
+  A vertical swipe is now translated to `scrollLines()` and `touch-action` stops
+  the browser from panning the page instead.
+
+### Fixed
+
+- Android soft-keyboard input no longer loses a committed word when it is
+  followed by a space tap. The IME patch now flushes the pending composition
+  text before forwarding the input event instead of cancelling it, so the word
+  and the space both reach the terminal exactly once.
+- Embedded assets (including `/vendor/xterm.js`) are served with `no-cache`
+  instead of a 24-hour `max-age`, and the vendored URLs carry a cache-busting
+  query. Previously a rebuilt server could keep serving a stale vendored bundle
+  to clients that had already cached it.
+- The terminal's hidden textarea now sets `autocomplete="off"`, which xterm
+  6.0.0 omits, so the platform stops offering suggestions on the terminal.
+
 ## [0.0.4]
 
 ### Added

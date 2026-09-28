@@ -322,6 +322,15 @@ code {
   display: none;
 }
 
+#settings-keyboard {
+  margin-top: 20px;
+}
+
+#settings-keyboard .muted {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
 .btn-ghost.wide {
   width: 100%;
   padding: 10px 14px;
@@ -590,6 +599,10 @@ code {
   position: absolute;
   inset: 0;
   padding: 6px 8px;
+  /* Swipes are translated to scrollLines() in app.js; stop the browser from
+     panning the page or starting a pull-to-refresh instead. */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .terminal .xterm {
@@ -860,6 +873,12 @@ code {
   .key-mod {
     min-width: 52px;
     font-size: 12px;
+  }
+
+  .key-ctrl {
+    min-width: 44px;
+    font-size: 13px;
+    font-weight: 600;
   }
 
   .key.armed {

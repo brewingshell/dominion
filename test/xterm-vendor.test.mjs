@@ -6,16 +6,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 import {
   VENDOR_PATH,
   VENDOR_VERSION,
+  ASSET_QUERY,
   PRISTINE_SHA256,
   PATCHED_SHA256,
   PATCHES,
   applyPatches,
   sha256,
 } from "./xterm-patch.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("vendored xterm is byte-for-byte the patched pinned build", () => {
   const src = readFileSync(VENDOR_PATH, "utf8");
@@ -36,9 +41,11 @@ test("vendored xterm carries the IME fixes and not the buggy code", () => {
     // #5439: guarded textarea-diff timer.
     "if(this._textareaChangeTimer)return;",
     "this._textareaChangeTimer=void 0",
-    // #6009: cancel deferred composition send when input delivers the text.
-    "cancelPendingComposition(){",
-    "this._compositionHelper.cancelPendingComposition();const t=e.data",
+    // #6009 + Android space-to-commit: flush the pending composition send when
+    // input delivers the committed text, passing the event data so it is not
+    // sent twice.
+    "cancelPendingComposition(t){",
+    "this._compositionHelper.cancelPendingComposition(e.data);const t=e.data",
     // #6009: reset _keyDownSeen when the composition helper consumes keydown.
     "this._keyDownSeen=!1,this.options.scrollOnUserInput",
     // #4173/#6012: clear the hidden textarea after a committed composition.
@@ -70,4 +77,20 @@ test("patch table is exactly what produced the vendored bundle", () => {
   // ...and no pristine anchor may survive, which also proves applyPatches is
   // not a no-op and that the vendored file really is patched.
   assert.throws(() => applyPatches(src));
+});
+
+test("index.html loads the vendored assets under the cache-busting query", () => {
+  const html = readFileSync(join(root, "web", "index.html"), "utf8");
+  for (const asset of ["xterm.js", "xterm.css", "addon-fit.js"]) {
+    assert.ok(
+      html.includes(`/vendor/${asset}?v=${ASSET_QUERY}`),
+      `/vendor/${asset} must be referenced with ?v=${ASSET_QUERY}`
+    );
+  }
+  // The token tracks the pinned release, so an upstream bump forces the cache
+  // token to move too.
+  assert.ok(
+    ASSET_QUERY.startsWith(VENDOR_VERSION),
+    `ASSET_QUERY ${ASSET_QUERY} must start with VENDOR_VERSION ${VENDOR_VERSION}`
+  );
 });

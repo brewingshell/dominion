@@ -25,15 +25,24 @@ function stubTerminal(window) {
       this.cols = 80;
       this.rows = 24;
       this.options = {};
+      this.textarea = null;
     }
     loadAddon() {}
-    open() {}
+    open(el) {
+      this.element = el;
+      this.textarea = window.document.createElement("textarea");
+      this.textarea.className = "xterm-helper-textarea";
+      if (el) el.appendChild(this.textarea);
+    }
     onData() {}
     onResize() {}
     focus() {}
     dispose() {}
     write() {}
     writeln() {}
+    scrollLines(lines) {
+      this.scrolled = (this.scrolled || []).concat(lines);
+    }
   };
   window.FitAddon = { FitAddon: class { fit() {} } };
   window.__sockets = [];
@@ -132,6 +141,9 @@ export function load(routes = [], options = {}) {
     "startPolling,poll,api,inShell,shellChangeTarget,shellSettingsTarget," +
     "applyTheme,currentTheme," +
     "canManageServers,shellVersion,changePIN,setPinError," +
+    "sendToTab,rawInputEnabled,rawInputDefault,setRawInput,setTabRawInput," +
+    "handleRawInput,forwardCompositionDelta,KEY_SEQ," +
+    "bindTouchScroll,cellHeight," +
     "TERM_THEMES};\n";
   window.eval(src.slice(0, idx) + hook + src.slice(idx));
 

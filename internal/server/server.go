@@ -242,14 +242,11 @@ func (s *Server) staticHandler() http.Handler {
 	}
 	fileServer := http.FileServer(http.FS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// xterm vendored assets are immutable for this build.
-		if strings.HasPrefix(r.URL.Path, "/vendor/") {
-			w.Header().Set("Cache-Control", "public, max-age=86400")
-		} else {
-			// Everything else is embedded and changes on rebuild; make
-			// browsers revalidate so a restart is enough to pick it up.
-			w.Header().Set("Cache-Control", "no-cache")
-		}
+		// Every embedded asset changes on rebuild, and the URLs do not carry a
+		// content hash, so make browsers revalidate. Vendored assets (xterm.js)
+		// used to be marked immutable for a day, which meant a rebuilt server
+		// kept serving a stale bundle to clients that had already cached it.
+		w.Header().Set("Cache-Control", "no-cache")
 		fileServer.ServeHTTP(w, r)
 	})
 }

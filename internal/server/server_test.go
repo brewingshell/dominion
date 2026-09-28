@@ -610,7 +610,7 @@ func TestStaticCacheHeaders(t *testing.T) {
 		{"/", "no-cache"},
 		{"/app.js", "no-cache"},
 		{"/style.css", "no-cache"},
-		{"/vendor/xterm.js", "public, max-age=86400"},
+		{"/vendor/xterm.js", "no-cache"},
 	}
 	for _, tc := range cases {
 		res, err := http.Get(ts.URL + tc.path)

@@ -7,6 +7,15 @@
 // overlap (#5439) and committed composition text is left in the hidden textarea,
 // where a later delete re-sends it (#4173/#6012).
 //
+// An initial fix cancelled the pending composition send whenever an `input`
+// event arrived, which fixed the #4173 re-send but introduced a worse Android
+// regression: committing a word and then tapping space fires
+// compositionend -> input(" "), and the cancel discarded the word before it was
+// ever sent (only the space reached the PTY). The current patch instead flushes
+// the pending composition text synchronously from _inputEvent before sending
+// the input data, subtracting the incoming data when the event already carries
+// it, so the word and the space both arrive exactly once.
+//
 // Instead of hand-editing the minified bundle, this script starts from the
 // pristine release, verifies its checksum, applies the patch table below, and
 // writes the vendored file. Upgrade xterm by bumping VENDOR_VERSION/PRISTINE_
@@ -29,6 +38,12 @@ const root = join(here, "..");
 export const VENDOR_PATH = join(root, "web", "vendor", "xterm.js");
 export const VENDOR_VERSION = "6.0.0";
 
+// Cache-busting token for the vendored asset URLs in web/index.html. Bump the
+// suffix whenever the bundle changes so clients that cached the old (now
+// no-cache) URL still fetch the new one; test/xterm-vendor.test.mjs fails if
+// index.html and this constant disagree or if it stops tracking VENDOR_VERSION.
+export const ASSET_QUERY = "6.0.0p3";
+
 const UPSTREAM_URL =
   `https://cdn.jsdelivr.net/npm/@xterm/xterm@${VENDOR_VERSION}/lib/xterm.js`;
 
@@ -39,7 +54,7 @@ export const PRISTINE_SHA256 =
 // The patched result that web/vendor/xterm.js must equal. Regenerate with
 // `node test/xterm-patch.mjs` after changing PATCHES or VENDOR_VERSION.
 export const PATCHED_SHA256 =
-  "6d544927e35ca9b510382939dbf925d5704d2f2c4ff03d58f561aab330002588";
+  "1910dea2db812af5914717541fef2389838de7656fdd726b28e000a0aeaa274d";
 
 // Each entry is [before, after]; `before` must occur exactly once in the
 // pristine bundle. The bundle's CompositionHelper/CoreBrowserTerminal classes
@@ -55,11 +70,15 @@ export const PATCHES = [
   [
     "_handleAnyTextareaChanges(){const e=this._textarea.value;setTimeout((()=>{if(!this._isComposing){const t=this._textarea.value,i=t.replace(e,\"\");this._dataAlreadySent=i,t.length>e.length?this._coreService.triggerDataEvent(i,!0):t.length<e.length?this._coreService.triggerDataEvent(`${a.C0.DEL}`,!0):t.length===e.length&&t!==e&&this._coreService.triggerDataEvent(t,!0)}}),0)}",
     "_handleAnyTextareaChanges(){if(this._textareaChangeTimer)return;const e=this._textarea.value;this._textareaChangeTimer=setTimeout((()=>{if(this._textareaChangeTimer=void 0,!this._isComposing){const t=this._textarea.value,i=t.replace(e,\"\");this._dataAlreadySent=i,t.length>e.length?this._coreService.triggerDataEvent(i,!0):t.length<e.length?this._coreService.triggerDataEvent(`${a.C0.DEL}`,!0):t.length===e.length&&t!==e&&this._coreService.triggerDataEvent(t,!0)}}),0)}" +
-      // #6009/#4173: when the input event has delivered the committed text,
-      // cancel any pending composition send and clear the hidden textarea so a
-      // later delete cannot re-propagate the old composition. Clearing is
-      // skipped during composition and in screen-reader mode.
-      "cancelPendingComposition(){this._isSendingComposition=!1,this._textareaChangeTimer&&(clearTimeout(this._textareaChangeTimer),this._textareaChangeTimer=void 0),this._isComposing||this._optionsService.rawOptions.screenReaderMode||(this._textarea.value=\"\",this._dataAlreadySent=\"\")}",
+      // #6009/#4173 + Android space-to-commit: when the input event arrives while
+      // a composition send is pending, flush that text synchronously (minus the
+      // input event's own data, which _inputEvent sends immediately after) rather
+      // than dropping it, then clear the hidden textarea so a later delete cannot
+      // re-propagate the old composition. The flush must run before the pending
+      // setTimeout, otherwise the deferred send is cancelled and the committed
+      // word is lost. Clearing is skipped during composition and in screen-reader
+      // mode.
+      "cancelPendingComposition(t){if(this._isSendingComposition){this._isSendingComposition=!1;const e=this._compositionPosition.start+this._dataAlreadySent.length;let i=this._isComposing?this._textarea.value.substring(e,this._compositionPosition.start):this._textarea.value.substring(e);t&&i.endsWith(t)&&(i=i.slice(0,i.length-t.length)),i.length>0&&this._coreService.triggerDataEvent(i,!0)}this._textareaChangeTimer&&(clearTimeout(this._textareaChangeTimer),this._textareaChangeTimer=void 0),this._isComposing||this._optionsService.rawOptions.screenReaderMode||(this._textarea.value=\"\",this._dataAlreadySent=\"\")}",
   ],
   // #6009: when the composition helper consumes the keydown (keyCode 229) it
   // emits no data, so reset _keyDownSeen; otherwise the matching input event is
@@ -68,11 +87,13 @@ export const PATCHES = [
     "if(!t&&!this._compositionHelper.keydown(e))return this.options.scrollOnUserInput&&this.buffer.ybase!==this.buffer.ydisp&&this.scrollToBottom(!0),!1;",
     "if(!t&&!this._compositionHelper.keydown(e))return this._keyDownSeen=!1,this.options.scrollOnUserInput&&this.buffer.ybase!==this.buffer.ydisp&&this.scrollToBottom(!0),!1;",
   ],
-  // #6009: the input event now carries committed IME text; cancel the deferred
-  // composition send so _finalizeComposition cannot emit it a second time.
+  // #6009: the input event now carries committed IME text; flush any pending
+  // composition send first (passing the event data so it is not sent twice), then
+  // send the input data. Without the flush the pending composition is dropped and
+  // an Android word followed by a space tap is lost.
   [
     "this._unprocessedDeadKey=!1;const t=e.data;return this.coreService.triggerDataEvent(t,!0),this.cancel(e),!0",
-    "this._unprocessedDeadKey=!1,this._compositionHelper.cancelPendingComposition();const t=e.data;return this.coreService.triggerDataEvent(t,!0),this.cancel(e),!0",
+    "this._unprocessedDeadKey=!1,this._compositionHelper.cancelPendingComposition(e.data);const t=e.data;return this.coreService.triggerDataEvent(t,!0),this.cancel(e),!0",
   ],
   // #4173/#6012: clear the hidden textarea after a committed composition is
   // sent, unless a new composition started or screen-reader mode is active
